@@ -276,6 +276,70 @@ Table 8: Proposal fields.
 | `depends_on` | Ordered proposal identifiers that must be extracted first |
 | `branch`     | Optional explicit branch name override                    |
 
+For screen readers: The following entity-relationship diagram shows that one
+manifest contains many fragments and proposals, while proposal-to-fragment and
+proposal-to-proposal dependency ordering are represented through explicit join
+records.
+
+```mermaid
+erDiagram
+    MANIFEST {
+        int version
+        string base_ref
+        string head_oid
+        string merge_base_oid
+        string change_range
+        int generated_at_unix
+    }
+
+    FRAGMENT {
+        string id
+        string fingerprint
+        string change_kind
+        string path_before
+        string path_after
+        string old_blob
+        string new_blob
+        string old_span
+        string new_span
+        string context_before
+        string context_after
+        string patch_file
+        string metadata_file
+    }
+
+    PROPOSAL {
+        string id
+        string title
+        string body
+        string branch
+    }
+
+    PROPOSAL_FRAGMENT {
+        string proposal_id
+        string fragment_id
+        int order_index
+    }
+
+    PROPOSAL_DEPENDENCY {
+        string proposal_id
+        string depends_on_proposal_id
+        int order_index
+    }
+
+    MANIFEST ||--o{ FRAGMENT : contains
+    MANIFEST ||--o{ PROPOSAL : contains
+
+    PROPOSAL ||--o{ PROPOSAL_FRAGMENT : references
+    FRAGMENT ||--o{ PROPOSAL_FRAGMENT : referenced_by
+
+    PROPOSAL ||--o{ PROPOSAL_DEPENDENCY : has_dependency
+    PROPOSAL ||--o{ PROPOSAL_DEPENDENCY : depended_on_by
+```
+
+_Figure 2: Manifest entity relationships for fragments, proposals, proposal
+membership, and proposal dependency ordering._
+
 The following example shows the intended shape without fixing the tool to one
 exact serialisation layout beyond the required fields.
 
