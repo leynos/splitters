@@ -8,11 +8,10 @@ build, test, and release workflow for day-to-day development.
 ## 1. Normative references and current state
 
 The primary source of truth for behaviour and architecture remains
-[docs/splitters-design.md](docs/splitters-design.md). The implementation
-sequence and expected delivery phases remain defined in
-[docs/roadmap.md](docs/roadmap.md). This guide explains how contributors should
-translate those documents into maintainable Rust modules and operational
-workflows.
+`docs/splitters-design.md`.[^1] The implementation sequence and expected
+delivery phases remain defined in `docs/roadmap.md`.[^2] This guide explains
+how contributors should translate those documents into maintainable Rust
+modules and operational workflows.
 
 The current repository state is intentionally early:
 
@@ -221,7 +220,7 @@ verification and publication._
 
 Contributors should introduce the planned modules incrementally rather than
 landing a single large refactor. The practical order already exists in
-`docs/roadmap.md` and should remain the default implementation path:
+`docs/roadmap.md`[^2] and should remain the default implementation path:
 
 1. Establish the `cli` surface and exit-code mapping.
 2. Introduce `manifest` schema types and proposal validation.
@@ -232,9 +231,9 @@ landing a single large refactor. The practical order already exists in
    publication.
 
 When a change alters the behavioural contract, the contributor should update
-`docs/splitters-design.md` first or in the same patch set. When a change alters
-delivery sequencing or validation scope, the contributor should update
-`docs/roadmap.md` in the same patch set.
+`docs/splitters-design.md`[^1] first or in the same patch set. When a change
+alters delivery sequencing or validation scope, the contributor should update
+`docs/roadmap.md`[^2] in the same patch set.
 
 ## 6. Build, test, and lint procedure
 
@@ -302,3 +301,6 @@ graph fills in:
   compatibility, fragment identity, replay safety, and subtraction safety.
 - Keep the design document, roadmap, and developer's guide synchronized when
   architectural boundaries or responsibilities change.
+
+[^1]: `docs/splitters-design.md`
+[^2]: `docs/roadmap.md`
