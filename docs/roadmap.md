@@ -10,9 +10,10 @@ measurable finish lines.
 
 ### 1.1. Establish the executable command surface
 
-This step delivers a real CLI entry point with stable command parsing, exit
-behaviour, and top-level repository preflight. It matters first because every
-later workstream depends on predictable argument handling and error reporting.
+This step delivers a real command-line interface (CLI) entry point with stable
+command parsing, exit behaviour, and top-level repository preflight. It matters
+first because every later workstream depends on predictable argument handling
+and error reporting.
 
 - [ ] 1.1.1. Replace the stub binary with the `map`, `validate`, and
   `extract` command skeletons. See `docs/splitters-design.md` §6 and §7.
@@ -48,7 +49,8 @@ extraction all depend on a stable on-disk format.
 - [ ] 1.2.1. Implement manifest version 1 schema types and round-trip I/O. See
   `docs/splitters-design.md` §8.
   - Model top-level manifest fields, fragment records, and proposal records.
-  - Serialize to TOML and mirror fragment metadata to JSON.
+  - Serialize to Tom's Obvious Minimal Language (TOML) and mirror fragment
+    metadata to JavaScript Object Notation (JSON).
   - Success criteria: round-trip tests prove no lossy field conversion for the
     normative schema.
 - [ ] 1.2.2. Implement proposal graph validation. Requires 1.2.1. See

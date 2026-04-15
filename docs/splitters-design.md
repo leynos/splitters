@@ -31,7 +31,7 @@ Splitters has five primary goals:
 - Materialize the change universe from `merge-base(base, HEAD)..HEAD` into
   stable, addressable fragments.
 - Allow a human or an agent to group fragments into named proposals by editing
-  a TOML manifest.
+  a Tom's Obvious Minimal Language (TOML) manifest.
 - Validate both the candidate branch and the residual branch before any
   mutation of the current branch.
 - Extract one validated proposal into a new branch and subtract that exact
@@ -101,6 +101,10 @@ Splitters follows a manifest-driven pipeline with three commands: `map`,
 replayed onto the base and removed from the current branch. `extract` reruns
 that proof, creates the new branch, and then subtracts the exact fragment set
 from the current branch.
+
+The persisted artefacts are one TOML manifest, fragment patch files, and
+metadata JavaScript Object Notation (JSON) files. No hidden state is kept
+outside that directory and the Git repository itself.
 
 Figure 1: Splitters command flow and artefact boundaries.
 
@@ -189,6 +193,14 @@ from the check command makes validation fail with exit code `1`. Failure to
 spawn the check command, or failure to create a worktree in which it could run,
 is an operational error with exit code `2`.
 
+`--check` is intentionally a trusted operator hook, not a sandbox. Splitters
+executes the supplied command as a normal subprocess inside worktrees that
+contain repository contents, and it inherits the caller's ambient operating
+system permissions unless a future wrapper says otherwise. Operators should
+therefore treat `--check` as equivalent in trust to running a local script in
+the repository, including any access that script has to credentials, network,
+or host files.
+
 ### 7.3 `extract`
 
 `extract` consumes one proposal, reruns validation, creates a new branch from
@@ -249,6 +261,15 @@ Table 6: Top-level manifest fields.
 | `merge_base_oid`    | Merge base between `base_ref` and `HEAD` at map time            |
 | `change_range`      | Human-readable form of the mapped range                         |
 | `generated_at_unix` | Generation timestamp for diagnostics only; not used in matching |
+
+The CLI must treat `version` as a strict compatibility gate. Version `1` is the
+only supported manifest schema for the initial implementation. If a manifest
+declares an unknown newer version, or an older version that the binary no
+longer supports, `validate` and `extract` must stop before any repository
+mutation and report an operational error that names the supported and
+encountered versions. Splitters should not rewrite manifests in place
+implicitly; an explicit future upgrade command is the correct place for schema
+migration behaviour.
 
 Table 7: Fragment fields.
 
@@ -484,6 +505,25 @@ The residual worktree starts from `HEAD`. Splitters applies the selected patch
 set in reverse there. This is the crucial design choice that prevents drift:
 Splitters does not recompute a residual diff from scratch. It subtracts the
 validated patch set that it intends to extract.
+
+History drift between `map` and later commands is expected rather than treated
+as exceptional. `validate` and `extract` recompute the current merge base for
+the chosen base ref, compare it with the manifest's recorded `merge_base_oid`
+and `head_oid`, and then rematch every fragment against the live change
+universe. A rebase, force-push, or amended commit series therefore has three
+possible outcomes:
+
+- The manifest still rematches uniquely and both candidate and residual proofs
+  pass, so the proposal remains valid.
+- One or more fragments no longer rematch uniquely, so validation fails with a
+  stale or ambiguous-fragment result and the current branch remains unchanged.
+- The fragments rematch, but replay or subtraction fails against the rewritten
+  history, so validation fails and extraction must not start mutation.
+
+The recorded object identifiers remain diagnostically important even when they
+are no longer current. They let Splitters explain whether failure came from
+schema issues, ref resolution problems, fragment drift, or proof failure after
+history rewriting.
 
 ## 11. Extraction and rollback model
 
