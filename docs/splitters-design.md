@@ -46,7 +46,7 @@ the design:
 - Semantic code analysis, abstract syntax tree-based grouping, or automatic
   proposal generation.
 - Automatic conflict resolution when a fragment no longer applies.
-- Forge support beyond optional GitHub publication through `gh pr create`.[^5]
+- Forge support beyond optional GitHub publication through `gh pr create`.[^3]
 - Multi-repository orchestration or submodule-aware extraction.
 
 ## 3. Terminology
@@ -91,7 +91,7 @@ The design assumes the following constraints are non-negotiable:
   that candidate creation and residual subtraction are both clean, it stops.
 - Publishing is optional and outside the core transaction boundary. The local
   extraction succeeds or fails independently of remote pull request
-  creation.[^5]
+  creation.[^3]
 
 ## 6. Architecture overview
 
@@ -135,9 +135,9 @@ Three execution boundaries matter:
 - The Rust core owns repository discovery, diff inspection, manifest I/O,
   fragment matching, and commit orchestration.
 - Git patch and worktree primitives provide the applicability and isolation
-  guarantees that Splitters needs for safe dry runs and subtraction.[^3][^4]
+  guarantees that Splitters needs for safe dry runs and subtraction.[^4][^5]
 - GitHub publication is a thin optional wrapper around `gh pr create`, with
-  `--base` and `--head` supplied explicitly to avoid ambiguous defaults.[^5]
+  `--base` and `--head` supplied explicitly to avoid ambiguous defaults.[^3]
 
 ## 7. Command contracts
 
@@ -228,7 +228,7 @@ Table 5: `extract` contract.
 
 Remote publication is intentionally non-atomic. If `gh pr create` fails after
 local extraction, Splitters reports the failure and leaves local Git state
-unchanged from the successful extraction.[^5]
+unchanged from the successful extraction.[^3]
 
 ## 8. On-disk contract
 
@@ -433,7 +433,7 @@ Proposal rules are equally strict:
 
 Validation is the core safety barrier. Splitters creates two throwaway linked
 worktrees so that the proof runs against isolated indexes and working trees
-rather than against the caller’s checkout.[^4]
+rather than against the caller’s checkout.[^5]
 
 Table 9: Validation stages.
 
@@ -499,7 +499,7 @@ optional checks, and report emission._
 The candidate worktree starts from the chosen base ref. Splitters applies the
 selected fragment patches there and checks that the result is clean. Git’s own
 patch machinery already supports dry-run applicability checks and reverse patch
-application, so Splitters uses that semantics rather than inventing one.[^3]
+application, so Splitters uses that semantics rather than inventing one.[^4]
 
 The residual worktree starts from `HEAD`. Splitters applies the selected patch
 set in reverse there. This is the crucial design choice that prevents drift:
@@ -540,7 +540,7 @@ history rewriting.
 
 The subtraction step uses the exact patch set that passed validation, applied
 in reverse. Git already defines reverse patch application through
-`git apply --reverse`, which is the behaviour this design relies upon.[^3]
+`git apply --reverse`, which is the behaviour this design relies upon.[^4]
 
 Recovery guarantees are intentionally modest and explicit:
 
@@ -614,19 +614,19 @@ publication._
 Rust is an appropriate implementation language because Splitters needs a single
 portable binary, low-level Git manipulation, and strict control over error
 handling. `clap` derive macros provide a concise way to express the command and
-flag surface while still generating strong help output and typed parsing.[^7]
+flag surface while still generating strong help output and typed parsing.[^6]
 
 The design uses a hybrid Git integration strategy:
 
 - `git2` handles repository discovery, merge-base calculation, diff traversal,
-  worktree enumeration, and commit-oriented repository operations.[^6]
+  worktree enumeration, and commit-oriented repository operations.[^7]
 - `git apply` handles applicability checks and exact reverse subtraction because
   its behaviour is defined directly on unified diff payloads and aligns with
-  the emitted patch files.[^3]
+  the emitted patch files.[^4]
 - `git worktree` provides isolated dry-run checkouts with per-worktree `HEAD`
-  and index state, which makes candidate and residual testing safe.[^4]
+  and index state, which makes candidate and residual testing safe.[^5]
 - `gh pr create` remains an optional subprocess that receives explicit
-  `--base`, `--head`, `--title`, and `--body` arguments.[^5]
+  `--base`, `--head`, `--title`, and `--body` arguments.[^3]
 
 The internal module split should follow the public responsibilities rather than
 the transport layer:
@@ -678,7 +678,7 @@ stateful branch-management concerns that Splitters deliberately excludes.[^2]
 Raw Git plumbing is also insufficient on its own. `git apply`, `git worktree`,
 and related commands provide the safety-critical primitives Splitters needs,
 but they do not provide stable fragment identity, proposal validation, or a
-manifest that survives across iterations.[^3][^4]
+manifest that survives across iterations.[^4][^5]
 
 ## 15. Risks and deferred decisions
 
@@ -713,17 +713,17 @@ justify the design constraints and implementation choices in this document.
 [^2]: `cesarferreira/stax` README, which describes stax as a modern stacked
   branch CLI with an interactive terminal user interface and `st split`
   support. Accessed 2026-04-15. <https://github.com/cesarferreira/stax>
-[^3]: Git documentation for `git-apply`, including `--check`, `--index`, and
-  `--reverse`. Accessed 2026-04-15. <https://git-scm.com/docs/git-apply>
-[^4]: Git documentation for `git-worktree`, which describes linked worktrees,
-  per-worktree `HEAD` and index state, and add/remove lifecycle behaviour.
-  Accessed 2026-04-15. <https://git-scm.com/docs/git-worktree>
-[^5]: GitHub CLI manual for `gh pr create`, including explicit `--base` and
+[^3]: GitHub CLI manual for `gh pr create`, including explicit `--base` and
   `--head` behaviour and the optional nature of prompting and push handling.
   Accessed 2026-04-15. <https://cli.github.com/manual/gh_pr_create>
-[^6]: `git2::Repository` documentation, which exposes repository apply,
-  apply-to-tree, and worktree operations used by the Rust core. Accessed
-  2026-04-15. <https://docs.rs/git2/latest/git2/struct.Repository.html>
-[^7]: `clap` derive reference, which documents `Parser`, `Subcommand`, and
+[^4]: Git documentation for `git-apply`, including `--check`, `--index`, and
+  `--reverse`. Accessed 2026-04-15. <https://git-scm.com/docs/git-apply>
+[^5]: Git documentation for `git-worktree`, which describes linked worktrees,
+  per-worktree `HEAD` and index state, and add/remove lifecycle behaviour.
+  Accessed 2026-04-15. <https://git-scm.com/docs/git-worktree>
+[^6]: `clap` derive reference, which documents `Parser`, `Subcommand`, and
   doc-comment-driven help generation for typed CLI surfaces. Accessed
   2026-04-15. <https://docs.rs/clap/latest/clap/_derive/index.html>
+[^7]: `git2::Repository` documentation, which exposes repository apply,
+  apply-to-tree, and worktree operations used by the Rust core. Accessed
+  2026-04-15. <https://docs.rs/git2/latest/git2/struct.Repository.html>
