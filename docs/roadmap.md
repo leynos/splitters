@@ -97,7 +97,7 @@ because no proposal work can exist without a stable fragment set.
   - Write outputs to a temporary directory and move them into place only after
     success.
   - Refuse to overwrite an existing manifest directory without an explicit
-    replace policy.
+    replacement policy.
   - Success criteria: interrupted writes do not leave a half-populated manifest
     directory behind.
 

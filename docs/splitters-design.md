@@ -43,7 +43,7 @@ Splitters explicitly does not attempt to provide the following in version 1 of
 the design:
 
 - An interactive hunk picker, terminal user interface, or web interface.
-- Semantic code analysis, abstract syntax tree based grouping, or automatic
+- Semantic code analysis, abstract syntax tree-based grouping, or automatic
   proposal generation.
 - Automatic conflict resolution when a fragment no longer applies.
 - Forge support beyond optional GitHub publication through `gh pr create`.[^5]
@@ -362,7 +362,7 @@ _Figure 2: Manifest entity relationships for fragments, proposals, proposal
 membership, and proposal dependency ordering._
 
 The following example shows the intended shape without fixing the tool to one
-exact serialisation layout beyond the required fields.
+exact serialization layout beyond the required fields.
 
 ```toml
 version = 1
