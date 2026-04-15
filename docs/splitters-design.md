@@ -423,6 +423,58 @@ Table 9: Validation stages.
 | Residual replay  | Reverse the same fragments from `HEAD`               | Current branch cannot be reduced cleanly    |
 | Optional checks  | Run caller-supplied command in both synthetic states | Proposal is invalid for the supplied policy |
 
+For screen readers: The following sequence diagram shows the `validate`
+workflow from CLI invocation through manifest loading, fragment rematching,
+candidate and residual worktree proof runs, optional check-command execution,
+and final JSON report emission.
+
+```mermaid
+sequenceDiagram
+    actor Caller
+    participant CLI as CLI
+    participant ManifestMod as manifest_module
+    participant MatchingMod as matching_module
+    participant ValidateMod as validate_module
+    participant Repo as git_repository
+    participant GitPlumbing as git_apply_and_worktree
+    participant CheckCmd as optional_check_command
+
+    Caller->>CLI: invoke validate(manifest_dir, proposal_id, base_override, check_cmd)
+    CLI->>ManifestMod: load_manifest(manifest_dir)
+    ManifestMod-->>CLI: manifest
+
+    CLI->>MatchingMod: rematch_fragments(manifest, proposal_id, Repo)
+    MatchingMod->>Repo: compute_current_diff()
+    MatchingMod-->>CLI: rematch_result
+
+    CLI->>ValidateMod: validate_proposal(rematch_result, base_ref, check_cmd)
+
+    ValidateMod->>GitPlumbing: create_candidate_worktree(base_ref)
+    GitPlumbing-->>ValidateMod: candidate_worktree
+
+    ValidateMod->>GitPlumbing: apply_patches(candidate_worktree, proposal_fragments)
+    GitPlumbing-->>ValidateMod: candidate_status
+
+    ValidateMod->>GitPlumbing: create_residual_worktree(HEAD)
+    GitPlumbing-->>ValidateMod: residual_worktree
+
+    ValidateMod->>GitPlumbing: apply_reverse_patches(residual_worktree, proposal_fragments)
+    GitPlumbing-->>ValidateMod: residual_status
+
+    alt check_cmd_supplied
+        ValidateMod->>CheckCmd: run(candidate_worktree, check_cmd)
+        CheckCmd-->>ValidateMod: candidate_check_status
+        ValidateMod->>CheckCmd: run(residual_worktree, check_cmd)
+        CheckCmd-->>ValidateMod: residual_check_status
+    end
+
+    ValidateMod-->>CLI: validation_report_json, exit_code
+    CLI-->>Caller: stdout JSON, process exit_code
+```
+
+_Figure 3: Validation command sequence across rematching, dry-run replay,
+optional checks, and report emission._
+
 The candidate worktree starts from the chosen base ref. Splitters applies the
 selected fragment patches there and checks that the result is clean. Git’s own
 patch machinery already supports dry-run applicability checks and reverse patch
@@ -457,6 +509,65 @@ Recovery guarantees are intentionally modest and explicit:
 - The pre-subtraction state of the current branch is recoverable through reflog.
 - Splitters does not promise an all-or-nothing transaction across both local
   Git mutation and remote publication.
+
+For screen readers: The following sequence diagram shows the `extract` workflow
+from manifest loading through validation, candidate-branch materialization,
+reverse subtraction from the current branch, manifest persistence, optional
+pull request creation, and final report emission.
+
+```mermaid
+sequenceDiagram
+    actor Caller
+    participant CLI as CLI
+    participant ManifestMod as manifest_module
+    participant ValidateMod as validate_module
+    participant ExtractMod as extract_module
+    participant Repo as git_repository
+    participant GitPlumbing as git_apply_and_worktree
+    participant GHCLI as gh_pr_create
+
+    Caller->>CLI: invoke extract(manifest_dir, proposal_id, base_override, branch_name, publish)
+
+    CLI->>ManifestMod: load_manifest(manifest_dir)
+    ManifestMod-->>CLI: manifest
+
+    CLI->>ValidateMod: validate_proposal_for_extract(manifest, proposal_id, base_ref)
+    ValidateMod->>Repo: compute_merge_base(base_ref, HEAD)
+    ValidateMod->>GitPlumbing: candidate_and_residual_dry_run()
+    ValidateMod-->>CLI: validation_report(valid=true) or error
+
+    alt validation_succeeds
+        CLI->>ExtractMod: perform_extraction(manifest, proposal_id, base_ref, branch_name, publish)
+
+        ExtractMod->>Repo: create_or_reset_branch(target_branch, base_ref)
+        ExtractMod->>GitPlumbing: materialize_candidate_commit(target_branch, proposal_fragments)
+        GitPlumbing-->>ExtractMod: candidate_commit_oid
+
+        ExtractMod->>Repo: move_candidate_commit_onto_branch(target_branch, candidate_commit_oid)
+
+        ExtractMod->>GitPlumbing: apply_reverse_patches_to_current_branch(proposal_fragments)
+        GitPlumbing-->>ExtractMod: subtraction_status
+
+        ExtractMod->>ManifestMod: mark_proposal_extracted(manifest, proposal_id)
+        ManifestMod-->>ExtractMod: updated_manifest
+        ExtractMod->>ManifestMod: persist_manifest(updated_manifest)
+
+        alt publish_flag_set
+            ExtractMod->>GHCLI: create_pull_request(base_ref, target_branch, title, body)
+            GHCLI-->>ExtractMod: pr_result(success or failure)
+        end
+
+        ExtractMod-->>CLI: extraction_report_json, exit_code
+    else validation_fails
+        CLI-->>Caller: validation_error_report, exit_code=1
+    end
+
+    CLI-->>Caller: final_stdout, process_exit_code
+```
+
+_Figure 4: Extraction command sequence across validation, branch
+materialization, subtraction, manifest update, and optional pull request
+publication._
 
 ## 12. Implementation approach
 
