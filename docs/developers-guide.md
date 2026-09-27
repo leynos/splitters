@@ -304,3 +304,29 @@ graph fills in:
 
 [^1]: `docs/splitters-design.md`
 [^2]: `docs/roadmap.md`
+
+## Markdown formatting
+
+Markdown follows the estate's `markdown-formatting-baseline` rule.
+
+- `make fmt` rewrites Markdown with
+  `mdtablefix --in-place --git --include-untracked --wrap --renumber --breaks
+  --ellipsis --fences`,
+  then runs `markdownlint-cli2 --fix "**/*.md"`.
+- `make check-fmt` runs the same mdtablefix command with `--check` in place of
+  `--in-place`, and fails when any file would change.
+- `--git --include-untracked` selects the Markdown files Git tracks plus the
+  untracked files Git does not ignore, so a new document is checked before it
+  is staged.
+- `.markdownlint-cli2.jsonc` carries the canonical markdownlint configuration.
+  Keep its `config` entries and `ignores` globs; add repository-specific rules
+  or globs beside them.
+- CI installs mdtablefix 0.6.0 with the shared `install-mdtablefix` action
+  before `make check-fmt`, and lints Markdown with
+  `DavidAnson/markdownlint-cli2-action` over `**/*.md`.
+
+Install mdtablefix 0.6.0 or later locally with
+`cargo binstall --no-confirm mdtablefix@0.6.0`, or
+`cargo install --locked mdtablefix@0.6.0`. Install markdownlint-cli2 with
+`bun add --global markdownlint-cli2` or
+`npm install --global markdownlint-cli2`.
