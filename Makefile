@@ -27,6 +27,9 @@ STANDARD_RUSTFLAGS = $(STANDARD_THREADS_FLAG)$(if $(filter Linux,$(BUILD_HOST_OS
 # Release builds take neither flag: assigning `RUSTFLAGS`, even to an empty
 # inherited value, displaces every `rustflags` source in the configuration.
 RELEASE_RUSTFLAGS = RUSTFLAGS="$${RUSTFLAGS-}"
+# Debug builds keep a caller's exported flags and add the standard ones,
+# since an inherited `RUSTFLAGS` would otherwise displace the configuration.
+DEBUG_RUSTFLAGS = RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(STANDARD_RUSTFLAGS)"
 # Whitaker's Dylint driver runs on its own pinned toolchain, which need not
 # carry the Cranelift component the development profile selects, so its
 # check builds take LLVM.
@@ -55,7 +58,7 @@ ifneq ($(TEST_CMD),test)
 endif
 
 target/%/$(TARGET): ## Build binary in debug or release mode
-	$(if $(findstring release,$(@)),$(RELEASE_RUSTFLAGS) )$(CARGO) build $(BUILD_JOBS) $(if $(findstring release,$(@)),--release) --bin $(TARGET)
+	$(if $(findstring release,$(@)),$(RELEASE_RUSTFLAGS),$(DEBUG_RUSTFLAGS)) $(CARGO) build $(BUILD_JOBS) $(if $(findstring release,$(@)),--release) --bin $(TARGET)
 
 lint: ## Run Clippy with warnings denied
 	RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --no-deps

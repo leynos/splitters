@@ -11,8 +11,10 @@
 //!
 //! The Makefile clauses run `make -n` and read the commands it would run,
 //! rather than the Makefile's text, so a flag lost through a variable or a
-//! recipe edit fails here. They run once as a Linux host and once as a macOS
-//! host, because mold is added on Linux alone. File access goes through a
+//! recipe edit fails here. Each assigned value is expanded by the shell, with
+//! and without an inherited `RUSTFLAGS`, exactly as the recipe would expand
+//! it. The clauses run once as a Linux host and once as a macOS host, because
+//! mold is added on Linux alone. File access goes through a
 //! `cap_std` directory handle rooted at the crate manifest directory.
 
 use std::{error::Error, process::Command};
@@ -36,6 +38,14 @@ const DEVELOPMENT_TARGETS: [&str; 4] = ["test", "typecheck", "lint", "build"];
 /// Makefile targets that measure or ship, so every command assigns
 /// `RUSTFLAGS` and none carries a standard flag.
 const HELD_OUT_TARGETS: [&str; 1] = ["release"];
+
+/// Development targets that must assign `RUSTFLAGS` in at least one command,
+/// so the restatement checks above cannot pass by finding nothing to check.
+const ASSIGNING_TARGETS: [&str; 2] = ["test", "build"];
+
+/// A caller's own flags, to prove a recipe keeps the standard when it
+/// inherits an exported `RUSTFLAGS`.
+const INHERITED: &str = "-D warnings";
 
 /// The result of a reader, which the tests unwrap.
 type Read<T> = Result<T, Box<dyn Error>>;
@@ -85,9 +95,35 @@ fn sources() -> Read<Vec<(String, Vec<String>)>> {
     Ok(found)
 }
 
+/// Expands an assigned value as the recipe's shell would, with or without an
+/// inherited `RUSTFLAGS`, and splits it into normalized flags.
+fn expanded(value: &str, inherited: Option<&str>) -> Read<Vec<String>> {
+    let mut shell = Command::new("bash");
+    shell
+        .args(["-c", &format!("printf '%s' \"{value}\"")])
+        .env_remove("RUSTFLAGS");
+    if let Some(flags) = inherited {
+        shell.env("RUSTFLAGS", flags);
+    }
+    let output = shell.output()?;
+    if !output.status.success() {
+        return Err(format!("the shell could not expand `{value}`").into());
+    }
+    let words: Vec<String> = String::from_utf8_lossy(&output.stdout)
+        .split_whitespace()
+        .map(str::to_owned)
+        .collect();
+    Ok(normalized(&words))
+}
+
 /// Returns, for each cargo or whitaker command `make -n TARGET` would run on
-/// the named host, the `RUSTFLAGS` it assigns, or `None` when it assigns none.
-fn make_rustflags(target: &str, host: &str) -> Read<Vec<Option<Vec<String>>>> {
+/// the named host, the `RUSTFLAGS` it assigns (expanded under `inherited`),
+/// or `None` when it assigns none.
+fn make_rustflags(
+    target: &str,
+    host: &str,
+    inherited: Option<&str>,
+) -> Read<Vec<Option<Vec<String>>>> {
     let output = Command::new("make")
         .args(["-n", "-B", &format!("BUILD_HOST_OS={host}"), target])
         .current_dir(env!("CARGO_MANIFEST_DIR"))
@@ -107,8 +143,7 @@ fn make_rustflags(target: &str, host: &str) -> Read<Vec<Option<Vec<String>>>> {
                 let (value, _) = rest
                     .split_once('"')
                     .ok_or_else(|| format!("unterminated RUSTFLAGS in `{line}`"))?;
-                let words: Vec<String> = value.split_whitespace().map(str::to_owned).collect();
-                Some(normalized(&words))
+                Some(expanded(value, inherited)?)
             }
             // Any other spelling still replaces the configuration's sources,
             // so a form this reader cannot parse fails rather than passing.
@@ -127,10 +162,18 @@ fn make_rustflags(target: &str, host: &str) -> Read<Vec<Option<Vec<String>>>> {
 
 /// Checks every development target on one host: an assigned `RUSTFLAGS`
 /// carries the frontend flag, and carries mold exactly when the host is Linux.
-fn check_development_targets(host: &str, expects_mold: bool) -> Read<Vec<String>> {
+fn check_development_targets(
+    host: &str,
+    expects_mold: bool,
+    inherited: Option<&str>,
+) -> Read<Vec<String>> {
     let mut problems = Vec::new();
     for target in DEVELOPMENT_TARGETS {
-        for flags in make_rustflags(target, host)?.into_iter().flatten() {
+        // An empty assignment is `Some(vec![])` and is checked like any other.
+        for flags in make_rustflags(target, host, inherited)?
+            .into_iter()
+            .flatten()
+        {
             if !names(&flags, THREADS_FLAG) {
                 problems.push(format!(
                     "`make {target}` on {host} drops {THREADS_FLAG}: {flags:?}"
@@ -201,22 +244,28 @@ fn sources_differ_only_by_the_linker() {
 
 #[test]
 fn development_targets_restate_both_flags_on_linux() {
-    let problems = check_development_targets("Linux", true).expect("read `make -n` output");
+    let problems = check_development_targets("Linux", true, None).expect("read `make -n` output");
     assert!(problems.is_empty(), "{problems:#?}");
-    let assigned = make_rustflags("test", "Linux")
-        .expect("read `make -n` output")
-        .into_iter()
-        .flatten()
-        .count();
-    assert!(
-        assigned > 0,
-        "`make test` assigns no RUSTFLAGS, so the check above proves nothing"
-    );
+    for target in ASSIGNING_TARGETS {
+        let assigned = make_rustflags(target, "Linux", None)
+            .expect("read `make -n` output")
+            .into_iter()
+            .flatten()
+            .count();
+        assert!(assigned > 0, "`make {target}` assigns no RUSTFLAGS");
+    }
+}
+
+#[test]
+fn development_targets_keep_the_standard_under_inherited_rustflags() {
+    let problems =
+        check_development_targets("Linux", true, Some(INHERITED)).expect("read `make -n` output");
+    assert!(problems.is_empty(), "{problems:#?}");
 }
 
 #[test]
 fn development_targets_keep_the_frontend_but_not_mold_elsewhere() {
-    let problems = check_development_targets("Darwin", false).expect("read `make -n` output");
+    let problems = check_development_targets("Darwin", false, None).expect("read `make -n` output");
     assert!(problems.is_empty(), "{problems:#?}");
 }
 
@@ -226,7 +275,7 @@ fn development_targets_keep_the_frontend_but_not_mold_elsewhere() {
 #[test]
 fn coverage_and_release_take_neither_flag() {
     for target in HELD_OUT_TARGETS {
-        for assigned in make_rustflags(target, "Linux").expect("read `make -n` output") {
+        for assigned in make_rustflags(target, "Linux", None).expect("read `make -n` output") {
             let flags = assigned.unwrap_or_else(|| {
                 panic!("`make {target}` runs a command that takes the configuration's flags")
             });
