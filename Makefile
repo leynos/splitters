@@ -1,3 +1,12 @@
+# `make fmt` and `make check-fmt` call mdtablefix directly. `--git` selects the
+# Markdown files Git tracks and `--include-untracked` adds the untracked files
+# Git does not ignore, so a new document is formatted before it is staged.
+# Both modes need mdtablefix 0.6.0 or later; CI pins the version at its
+# install-mdtablefix step.
+MDTABLEFIX ?= mdtablefix
+MDTABLEFIX_SELECT = --git --include-untracked
+MDTABLEFIX_RULES = --wrap --renumber --breaks --ellipsis --fences
+
 .PHONY: help all clean test build release lint fmt check-fmt markdownlint nixie
 
 
@@ -45,10 +54,12 @@ typecheck: ## Type-check without building
 
 fmt: ## Format Rust and Markdown sources
 	$(CARGO) +nightly fmt --all
-	mdformat-all
+	$(MDTABLEFIX) --in-place $(MDTABLEFIX_SELECT) $(MDTABLEFIX_RULES)
+	$(MDLINT) --fix "**/*.md"
 
 check-fmt: ## Verify formatting
 	$(CARGO) fmt --all -- --check
+	$(MDTABLEFIX) --check $(MDTABLEFIX_SELECT) $(MDTABLEFIX_RULES)
 
 markdownlint: ## Lint Markdown files
 	$(MDLINT) '**/*.md'
