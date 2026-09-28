@@ -34,7 +34,9 @@ RELEASE_RUSTFLAGS = RUSTFLAGS="$${RUSTFLAGS-}"
 DEBUG_RUSTFLAGS = RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(STANDARD_RUSTFLAGS)"
 # Whitaker's Dylint driver runs on its own pinned toolchain, which need not
 # carry the Cranelift component the development profile selects, so its
-# check builds take LLVM.
+# check builds take LLVM. Dylint builds its driver in a crate outside this
+# repository, which the `[unstable]` table does not reach, so the override
+# also enables the unstable key there.
 WHITAKER_CODEGEN_BACKEND ?= llvm
 RUSTDOC_FLAGS ?=
 RUSTDOC_FLAGS := -D warnings $(RUSTDOC_FLAGS)
@@ -65,9 +67,13 @@ target/%/$(TARGET): ## Build binary in debug or release mode
 lint: ## Run Clippy with warnings denied
 	RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --no-deps
 	$(CARGO) clippy $(CLIPPY_FLAGS)
-	@command -v whitaker >/dev/null 2>&1 && \
-		CARGO_PROFILE_DEV_CODEGEN_BACKEND=$(WHITAKER_CODEGEN_BACKEND) RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" whitaker --all -- $(CARGO_FLAGS) || \
-		{ echo "whitaker not found on PATH; skipping whitaker lint. Install whitaker to run this check."; }
+	@# `if` rather than `&& ... ||`, so a failing Whitaker run fails the target
+	@# instead of falling through to the not-installed message.
+	@if command -v whitaker >/dev/null 2>&1; then \
+		CARGO_UNSTABLE_CODEGEN_BACKEND=true CARGO_PROFILE_DEV_CODEGEN_BACKEND=$(WHITAKER_CODEGEN_BACKEND) RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" whitaker --all -- $(CARGO_FLAGS); \
+	else \
+		echo "whitaker not found on PATH; skipping whitaker lint. Install whitaker to run this check."; \
+	fi
 
 typecheck: ## Type-check without building
 	RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" $(CARGO) check $(CARGO_FLAGS)
