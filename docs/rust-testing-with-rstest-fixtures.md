@@ -741,10 +741,10 @@ async fn async_fixture_value() -> u32 {
 
 #[rstest]
 #[async_std::test] // Or #[tokio::test], #[actix_rt::test]
-async fn my_async_test(async_fixture_value: u32) {
+async fn my_async_test(#[future] async_fixture_value: u32) {
     // Simulate further async work in the test
     async_std::task::sleep(Duration::from_millis(5)).await;
-    assert_eq!(async_fixture_value, 100);
+    assert_eq!(async_fixture_value.await, 100);
 }
 ```
 
