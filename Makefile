@@ -27,6 +27,10 @@ STANDARD_RUSTFLAGS = $(STANDARD_THREADS_FLAG)$(if $(filter Linux,$(BUILD_HOST_OS
 # Release builds take neither flag: assigning `RUSTFLAGS`, even to an empty
 # inherited value, displaces every `rustflags` source in the configuration.
 RELEASE_RUSTFLAGS = RUSTFLAGS="$${RUSTFLAGS-}"
+# Whitaker's Dylint driver runs on its own pinned toolchain, which need not
+# carry the Cranelift component the development profile selects, so its
+# check builds take LLVM.
+WHITAKER_CODEGEN_BACKEND ?= llvm
 RUSTDOC_FLAGS ?=
 RUSTDOC_FLAGS := -D warnings $(RUSTDOC_FLAGS)
 CARGO_FLAGS ?= --all-targets --all-features
@@ -57,7 +61,7 @@ lint: ## Run Clippy with warnings denied
 	RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --no-deps
 	$(CARGO) clippy $(CLIPPY_FLAGS)
 	@command -v whitaker >/dev/null 2>&1 && \
-		RUSTFLAGS="$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" whitaker --all -- $(CARGO_FLAGS) || \
+		CARGO_PROFILE_DEV_CODEGEN_BACKEND=$(WHITAKER_CODEGEN_BACKEND) RUSTFLAGS="$(RUST_FLAGS) $(STANDARD_RUSTFLAGS)" whitaker --all -- $(CARGO_FLAGS) || \
 		{ echo "whitaker not found on PATH; skipping whitaker lint. Install whitaker to run this check."; }
 
 typecheck: ## Type-check without building
