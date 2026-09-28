@@ -42,7 +42,11 @@ jobs:
         uses: leynos/shared-actions/.github/actions/generate-coverage@f9f1c863c8a5bef64aa6779caa746e1a4a6c1ad4
         env:
           # The development profile selects Cranelift, which cannot build
-          # `-Cinstrument-coverage`; the test profile inherits it.
+          # `-Cinstrument-coverage`; the test profile inherits it. The
+          # action's own `cargo install` runs outside the workspace
+          # configuration, so it needs the unstable feature from the
+          # environment to accept the profile key.
+          CARGO_UNSTABLE_CODEGEN_BACKEND: "true"
           CARGO_PROFILE_DEV_CODEGEN_BACKEND: llvm
         with:
           output-path: lcov.info
