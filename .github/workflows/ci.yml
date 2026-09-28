@@ -30,10 +30,20 @@ jobs:
         uses: DavidAnson/markdownlint-cli2-action@992badcdf24e3b8eb7e87ff9287fe931bcb00c6e
         with:
           globs: '**/*.md'
+      - name: Install mold linker
+        # The Makefile restates the build standard's `mold` flag for its
+        # gate targets, so the linker must be present before they build.
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends mold
       - name: Lint
         run: make lint
       - name: Test and Measure Coverage
         uses: leynos/shared-actions/.github/actions/generate-coverage@f9f1c863c8a5bef64aa6779caa746e1a4a6c1ad4
+        env:
+          # The development profile selects Cranelift, which cannot build
+          # `-Cinstrument-coverage`; the test profile inherits it.
+          CARGO_PROFILE_DEV_CODEGEN_BACKEND: llvm
         with:
           output-path: lcov.info
           format: lcov
