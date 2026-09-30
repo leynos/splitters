@@ -310,11 +310,10 @@ gets it. Every `rustflags` source enables the parallel `rustc` frontend with
 `-Zthreads=8`, and the `cfg(target_os = "linux")` source also links with
 `mold`; macOS and Windows keep their platform linker. A Linux host therefore
 needs `mold` installed before any `cargo` or `make` build, build scripts
-included. Cranelift is the
-development-profile codegen backend: the whole suite passes under it on the
-pinned `nightly-2026-03-26`. Coverage holds the development profile on LLVM,
-because `-Cinstrument-coverage` is LLVM-only and the test profile inherits the
-development profile's backend.
+included. Cranelift is the development-profile codegen backend: the whole suite
+passes under it on the pinned `nightly-2026-03-26`. Coverage holds the
+development profile on LLVM, because `-Cinstrument-coverage` is LLVM-only and
+the test profile inherits the development profile's backend.
 
 Cargo applies a single `rustflags` source rather than merging them, and an
 assigned `RUSTFLAGS` replaces every source. So each source repeats the frontend
@@ -327,8 +326,8 @@ the compilation target (`CARGO_BUILD_TARGET`, when set) are Linux.
 caller exports none (a bare `cargo build --release` still takes both flags,
 because Cargo does not select `rustflags` by profile) and so takes neither
 flag. The target is read from `CARGO_BUILD_TARGET` alone, which is the
-supported way to cross-compile here: a `--target` passed through `TEST_FLAGS`
-or `CARGO_FLAGS` is invisible to Make, so set the variable as well. CI installs
+supported way to cross-compile here: a `--target` passed through `TEST_FLAGS` or
+`CARGO_FLAGS` is invisible to Make, so set the variable as well. CI installs
 `mold` before the first gate target.
 
 `make lint` runs Whitaker on LLVM, because its Dylint driver builds outside
@@ -340,8 +339,9 @@ fails the target; a missing `whitaker` binary skips the check with a message.
 The coverage step in `ci.yml` sets the same two variables for the same reason.
 
 `tests/build_standard_contract.rs` holds the configuration and the Makefile
-recipes to the flag rules. `tests/build_standard_backend.rs` holds the Cranelift
-configuration, the coverage step's LLVM overrides and the Whitaker boundary.
+recipes to the flag rules. `tests/build_standard_backend.rs` holds the
+Cranelift configuration, the coverage step's LLVM overrides and the Whitaker
+boundary.
 
 [^1]: `docs/splitters-design.md`
 [^2]: `docs/roadmap.md`
