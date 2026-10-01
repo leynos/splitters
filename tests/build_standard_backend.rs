@@ -23,9 +23,9 @@ const CRANELIFT_COMPONENT: &str = "rustc-codegen-cranelift-preview";
 
 /// The overrides a build outside the workspace configuration needs to take
 /// LLVM: the unstable feature, then the profile's backend.
-const LLVM_OVERRIDES: [&str; 2] = [
-    "CARGO_UNSTABLE_CODEGEN_BACKEND",
-    "CARGO_PROFILE_DEV_CODEGEN_BACKEND",
+const LLVM_OVERRIDES: [(&str, &str); 2] = [
+    ("CARGO_UNSTABLE_CODEGEN_BACKEND", "true"),
+    ("CARGO_PROFILE_DEV_CODEGEN_BACKEND", "llvm"),
 ];
 
 /// Reads a file relative to the crate manifest directory.
@@ -72,29 +72,35 @@ fn cranelift_is_the_development_backend() {
 /// Returns the number of leading spaces on a line.
 fn indent(line: &str) -> usize { line.len() - line.trim_start().len() }
 
+/// Returns whether a line is blank or a comment, and so evidence of nothing.
+fn is_inert(line: &str) -> bool {
+    let trimmed = line.trim_start();
+    trimmed.is_empty() || trimmed.starts_with('#')
+}
+
 /// Returns whether a line begins a YAML sequence item, which is a workflow step.
 fn starts_step(line: &str) -> bool { line.trim_start().starts_with("- ") }
 
-/// Returns the lines of the workflow step that runs the coverage action.
+/// Returns the lines of the workflow step whose text holds `needle`.
 ///
 /// A step starts at a `- ` line and runs to the next `- ` line at the same or
 /// a shallower indent, so nested lists inside the step stay with it.
-fn coverage_step(workflow: &str) -> Vec<&str> {
+fn step_containing<'a>(workflow: &'a str, needle: &str) -> Vec<&'a str> {
     let lines: Vec<&str> = workflow.lines().collect();
     let step_starts: Vec<usize> = (0..lines.len())
         .filter(|&i| lines.get(i).is_some_and(|line| starts_step(line)))
         .collect();
     let bounds = lines
         .iter()
-        .position(|line| line.contains("generate-coverage@"))
-        .and_then(|uses| {
-            let start = step_starts.iter().copied().rfind(|&i| i <= uses)?;
+        .position(|line| !is_inert(line) && line.contains(needle))
+        .and_then(|found| {
+            let start = step_starts.iter().copied().rfind(|&i| i <= found)?;
             let start_indent = indent(lines.get(start)?);
             let end = step_starts
                 .iter()
                 .copied()
                 .find(|&i| {
-                    i > uses
+                    i > found
                         && lines
                             .get(i)
                             .is_some_and(|line| indent(line) <= start_indent)
@@ -108,29 +114,157 @@ fn coverage_step(workflow: &str) -> Vec<&str> {
         .unwrap_or_default()
 }
 
+/// Returns the `key: value` entries of a step's own `env` mapping.
+///
+/// Only lines nested under the step's `env:` key count, so the same names under
+/// `with:`, in a comment, or in another step are not evidence. Values lose
+/// their quotes.
+fn env_entries(step: &[&str]) -> Vec<(String, String)> {
+    // The step's keys sit two columns in from its `- ` marker.
+    let key_indent = step.first().map_or(0, |first| indent(first) + 2);
+    let Some(env) = step
+        .iter()
+        .position(|line| indent(line) == key_indent && line.trim() == "env:")
+    else {
+        return Vec::new();
+    };
+    step.iter()
+        .skip(env + 1)
+        .take_while(|line| is_inert(line) || indent(line) > key_indent)
+        .filter(|line| !is_inert(line))
+        .filter_map(|line| line.trim().split_once(':'))
+        .map(|(key, value)| (key.to_owned(), value.trim().trim_matches('"').to_owned()))
+        .collect()
+}
+
 #[test]
 fn coverage_builds_on_llvm() {
     let workflow = read(".github/workflows/ci.yml").expect("read ci.yml");
-    let step = coverage_step(&workflow);
+    let step = step_containing(&workflow, "generate-coverage@");
     assert!(!step.is_empty(), "ci.yml has no `generate-coverage` step");
-    for name in LLVM_OVERRIDES {
-        let wanted = if name == "CARGO_UNSTABLE_CODEGEN_BACKEND" {
-            "true"
-        } else {
-            "llvm"
-        };
-        let has_override = step.iter().any(|line| {
-            let mut words = line.trim().splitn(2, ':');
-            words.next() == Some(name)
-                && words
-                    .next()
-                    .is_some_and(|value| value.trim().trim_matches('"') == wanted)
-        });
+    let entries = env_entries(&step);
+    for (name, wanted) in LLVM_OVERRIDES {
         assert!(
-            has_override,
-            "the coverage step does not set {name}={wanted}"
+            entries
+                .iter()
+                .any(|(key, value)| key == name && value == wanted),
+            "the coverage step's env does not set {name}={wanted}"
         );
     }
+}
+
+/// Returns the lines of the job that contains the first line holding `needle`.
+///
+/// A job is a two-space-indented key under `jobs:`, running to the next one.
+fn job_containing<'a>(workflow: &'a str, needle: &str) -> Vec<&'a str> {
+    let lines: Vec<&str> = workflow.lines().collect();
+    let starts_job = |line: &str| indent(line) == 2 && line.trim_end().ends_with(':');
+    let bounds = lines
+        .iter()
+        .position(|line| !is_inert(line) && line.contains(needle))
+        .and_then(|found| {
+            let start = (0..=found).rfind(|&i| lines.get(i).is_some_and(|l| starts_job(l)))?;
+            let end = (found + 1..lines.len())
+                .find(|&i| lines.get(i).is_some_and(|l| starts_job(l)))
+                .unwrap_or(lines.len());
+            Some(start..end)
+        });
+    bounds
+        .and_then(|range| lines.get(range))
+        .map(<[&str]>::to_vec)
+        .unwrap_or_default()
+}
+
+/// Returns the offset of the first line that installs mold: an `apt` install
+/// naming it, or setup-rust's `install-mold` input set to true.
+fn mold_install_offset(job: &[&str]) -> Option<usize> {
+    job.iter().position(|line| {
+        let words = line.trim();
+        !is_inert(line)
+            && ((words.contains("apt") && words.contains("install") && words.contains("mold"))
+                || (words.starts_with("install-mold:") && words.contains("true")))
+    })
+}
+
+/// Returns the offset of the first non-comment line holding `needle`.
+fn offset_of(job: &[&str], needle: &str) -> Option<usize> {
+    job.iter()
+        .position(|line| !is_inert(line) && line.contains(needle))
+}
+
+#[test]
+fn ci_installs_mold_before_lint_and_coverage() {
+    let workflow = read(".github/workflows/ci.yml").expect("read ci.yml");
+    let job = job_containing(&workflow, "generate-coverage@");
+    let installed = mold_install_offset(&job).expect("the coverage job never installs mold");
+    for needle in ["make lint", "generate-coverage@"] {
+        let at = offset_of(&job, needle).expect("the job lacks a gate step");
+        assert!(installed < at, "mold is installed after `{needle}`");
+    }
+}
+
+/// A workflow whose coverage step carries its overrides in `env`, as required.
+#[cfg(test)]
+const GOOD_WORKFLOW: &str = concat!(
+    "jobs:\n",
+    "  build-test:\n",
+    "    steps:\n",
+    "      - name: Install mold linker\n",
+    "        run: sudo apt-get install --yes mold\n",
+    "      - run: make lint\n",
+    "      - name: Coverage\n",
+    "        uses: org/actions/generate-coverage@abc\n",
+    "        env:\n",
+    "          CARGO_UNSTABLE_CODEGEN_BACKEND: \"true\"\n",
+    "          CARGO_PROFILE_DEV_CODEGEN_BACKEND: llvm\n",
+    "        with:\n",
+    "          format: lcov\n",
+);
+
+#[test]
+fn the_env_reader_accepts_overrides_under_env() {
+    let step = step_containing(GOOD_WORKFLOW, "generate-coverage@");
+    let entries = env_entries(&step);
+    assert!(entries.contains(&("CARGO_PROFILE_DEV_CODEGEN_BACKEND".into(), "llvm".into())));
+}
+
+#[test]
+fn the_env_reader_rejects_overrides_moved_under_with() {
+    let moved = GOOD_WORKFLOW.replace("        env:\n", "        with:\n");
+    let step = step_containing(&moved, "generate-coverage@");
+    assert!(env_entries(&step).is_empty(), "with: entries read as env");
+}
+
+#[test]
+fn the_env_reader_rejects_commented_and_foreign_overrides() {
+    let commented = GOOD_WORKFLOW.replace(
+        "          CARGO_PROFILE_DEV_CODEGEN_BACKEND: llvm\n",
+        "          # CARGO_PROFILE_DEV_CODEGEN_BACKEND: llvm\n",
+    );
+    let step = step_containing(&commented, "generate-coverage@");
+    assert!(
+        !env_entries(&step)
+            .iter()
+            .any(|(key, _)| key.starts_with("CARGO_PROFILE"))
+    );
+}
+
+#[test]
+fn the_mold_reader_rejects_a_late_or_missing_install() {
+    let good = job_containing(GOOD_WORKFLOW, "generate-coverage@");
+    let good_install = mold_install_offset(&good).expect("the good workflow installs mold");
+    assert!(good_install < offset_of(&good, "make lint").expect("lint"));
+    let late_text = GOOD_WORKFLOW
+        .replace("run: sudo apt-get install --yes mold", "run: echo skipped")
+        .replace(
+            "      - run: make lint\n",
+            "      - run: make lint\n      - run: sudo apt-get install mold\n",
+        );
+    let late = job_containing(&late_text, "generate-coverage@");
+    let late_install = mold_install_offset(&late).expect("the late workflow installs mold");
+    assert!(late_install > offset_of(&late, "make lint").expect("lint"));
+    let none_text = GOOD_WORKFLOW.replace("sudo apt-get install --yes mold", "true");
+    assert!(mold_install_offset(&job_containing(&none_text, "generate-coverage@")).is_none());
 }
 
 /// Runs `make lint` with fake tools first on `PATH`, returning whether it
