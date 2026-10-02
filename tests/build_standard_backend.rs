@@ -304,7 +304,7 @@ fn lint_with_fake_whitaker(scratch: &str, whitaker_status: i32) -> Read<(bool, S
         .env_remove("RUSTFLAGS")
         .env_remove("CARGO_BUILD_TARGET")
         .output()?;
-    let record = dir.read_to_string("record").unwrap_or_default();
+    let record = dir.read_to_string("record")?;
     Ok((output.status.success(), record))
 }
 

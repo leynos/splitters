@@ -23,6 +23,7 @@ mod support;
 use rstest::rstest;
 use support::{
     Host,
+    LINUX_SELECTOR,
     LINUX_TABLES,
     MOLD_FLAG,
     THREADS_FLAG,
@@ -75,6 +76,10 @@ fn mold_is_confined_to_linux() {
         .filter(|(key, _)| LINUX_TABLES.contains(&key.as_str()))
         .collect();
     assert!(!linux.is_empty(), "no Linux target table carries rustflags");
+    assert!(
+        linux.iter().any(|(key, _)| key == LINUX_SELECTOR),
+        "mold must sit under `{LINUX_SELECTOR}` so every Linux architecture gets it"
+    );
     assert!(
         linux.iter().all(|(_, flags)| flags.names(MOLD_FLAG)),
         "a Linux table lost mold"
