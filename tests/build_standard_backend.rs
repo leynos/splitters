@@ -11,7 +11,10 @@
 //! crate manifest directory, and one at a scratch directory under
 //! `CARGO_TARGET_TMPDIR` for the fake tools.
 
-use std::{error::Error, process::Command};
+use std::{
+    error::Error,
+    process::{Command, Output},
+};
 
 use cap_std::{ambient_authority, fs::Dir};
 use rstest::rstest;
@@ -277,7 +280,7 @@ fn the_mold_reader_rejects_a_late_or_missing_install() {
 /// the tests run concurrently and a shared directory would be cleared under one
 /// of them.
 #[cfg(unix)]
-fn lint_with_fake_whitaker(scratch: &str, whitaker_status: i32) -> Read<(bool, String)> {
+fn lint_with_fake_whitaker(scratch: &str, whitaker_status: i32) -> Read<(Output, String)> {
     use cap_std::fs::{OpenOptions, OpenOptionsExt};
 
     let target_tmp = Dir::open_ambient_dir(env!("CARGO_TARGET_TMPDIR"), ambient_authority())?;
@@ -295,7 +298,9 @@ fn lint_with_fake_whitaker(scratch: &str, whitaker_status: i32) -> Read<(bool, S
     options.write(true).create_new(true).mode(0o755);
     std::io::Write::write_all(&mut dir.open_with("whitaker", &options)?, script.as_bytes())?;
     let root = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(scratch);
-    let path = format!("{}:{}", root.display(), std::env::var("PATH")?);
+    // A fixed PATH keeps the run hermetic: the fake first, then the system
+    // directories that hold `sh`, `env` and the `true` standing in for cargo.
+    let path = format!("{}:/usr/bin:/bin", root.display());
     let output = Command::new("make")
         .args(["lint", "CARGO=true"])
         .current_dir(env!("CARGO_MANIFEST_DIR"))
@@ -303,9 +308,14 @@ fn lint_with_fake_whitaker(scratch: &str, whitaker_status: i32) -> Read<(bool, S
         .env("WHITAKER_RECORD", root.join("record"))
         .env_remove("RUSTFLAGS")
         .env_remove("CARGO_BUILD_TARGET")
+        .env_remove("MAKEFLAGS")
+        .env_remove("MFLAGS")
+        .env_remove("MAKELEVEL")
         .output()?;
+    // A missing record means the fake never ran; surface that rather than
+    // reading it as an empty successful one.
     let record = dir.read_to_string("record")?;
-    Ok((output.status.success(), record))
+    Ok((output, record))
 }
 
 /// A Whitaker exit status decides `make lint`, and the fake is always run.
@@ -314,16 +324,15 @@ fn lint_with_fake_whitaker(scratch: &str, whitaker_status: i32) -> Read<(bool, S
 #[case::failing("whitaker-fails", 1)]
 #[case::passing("whitaker-passes", 0)]
 fn lint_succeeds_exactly_when_whitaker_does(#[case] scratch: &str, #[case] status: i32) {
-    let (succeeded, record) = lint_with_fake_whitaker(scratch, status).expect("run `make lint`");
+    let (output, record) = lint_with_fake_whitaker(scratch, status).expect("run `make lint`");
     assert_eq!(
-        succeeded,
+        output.status.success(),
         status == 0,
-        "`make lint` ignored Whitaker's exit status {status}"
+        "`make lint` ignored Whitaker's exit status {status}: {}{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
     );
-    assert!(
-        !record.is_empty(),
-        "`make lint` never ran the fake Whitaker"
-    );
+    assert!(!record.is_empty(), "the fake Whitaker recorded nothing");
 }
 
 #[cfg(unix)]
@@ -348,5 +357,46 @@ fn whitaker_builds_on_llvm_with_the_composed_flags() {
     assert!(
         flags.contains("-Zthreads=8"),
         "Whitaker lost the frontend flag: {flags}"
+    );
+}
+
+/// A missing Whitaker binary skips the check with a message and `make lint`
+/// still succeeds, since it is an optional tool; a present one that fails is
+/// covered above. `PATH` is narrowed to the system directories, where Whitaker
+/// is not installed, and the test refuses to run if it is found there anyway.
+#[cfg(unix)]
+#[test]
+fn a_missing_whitaker_skips_the_check_and_lint_succeeds() {
+    let system_path = "/usr/bin:/bin";
+    let found = Command::new("sh")
+        .args(["-c", "command -v whitaker"])
+        .env("PATH", system_path)
+        .output()
+        .expect("probe for Whitaker");
+    assert!(
+        !found.status.success(),
+        "Whitaker is installed under {system_path}"
+    );
+    let output = Command::new("make")
+        .args(["lint", "CARGO=true"])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .env("PATH", system_path)
+        .env_remove("RUSTFLAGS")
+        .env_remove("CARGO_BUILD_TARGET")
+        .env_remove("MAKEFLAGS")
+        .env_remove("MFLAGS")
+        .env_remove("MAKELEVEL")
+        .output()
+        .expect("run `make lint`");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        output.status.success(),
+        "`make lint` failed without Whitaker ({}): {stdout}{stderr}",
+        output.status
+    );
+    assert!(
+        stdout.contains("skipping whitaker lint"),
+        "no skip message in: {stdout}"
     );
 }

@@ -81,11 +81,14 @@ impl Flags {
         Self(joined)
     }
 
+    /// Returns whether the list holds no flag at all.
+    pub const fn is_empty(&self) -> bool { self.0.is_empty() }
+
     /// Returns whether the list names one flag.
     pub fn names(&self, flag: &str) -> bool { self.0.iter().any(|candidate| candidate == flag) }
 
     /// Returns whether the list holds the caller's words as one unbroken run.
-    fn carries_run(&self, caller: &str) -> bool {
+    pub fn carries_run(&self, caller: &str) -> bool {
         let wanted: Vec<&str> = caller.split_whitespace().collect();
         self.0
             .windows(wanted.len())

@@ -148,11 +148,17 @@ fn the_assigning_targets_assign_rustflags() {
 
 /// Release ships, so it stays on the default flags. Every command must assign
 /// `RUSTFLAGS`, since only an assignment displaces the configuration's
-/// sources. Coverage runs in CI, outwith the Makefile, and is not checked here.
-#[test]
-fn release_takes_neither_flag() {
+/// sources. It forwards the caller's own value untouched, and an empty one when
+/// the caller exports none. Coverage runs in CI, outwith the Makefile, and is
+/// not checked here.
+#[rstest]
+#[case::no_caller(None)]
+#[case::with_a_caller(Some(INHERITED))]
+fn release_takes_neither_flag(#[case] inherited: Option<&str>) {
     for target in HELD_OUT_TARGETS {
-        for assigned in make_rustflags(target, Host::Linux, None).expect("read `make -n` output") {
+        for assigned in
+            make_rustflags(target, Host::Linux, inherited).expect("read `make -n` output")
+        {
             let flags = assigned.unwrap_or_else(|| {
                 panic!("`make {target}` runs a command that takes the configuration's flags")
             });
@@ -161,6 +167,16 @@ fn release_takes_neither_flag() {
                 "`make {target}` takes {THREADS_FLAG}"
             );
             assert!(!flags.names(MOLD_FLAG), "`make {target}` takes {MOLD_FLAG}");
+            match inherited {
+                Some(caller) => assert!(
+                    flags.carries_run(caller),
+                    "`make {target}` drops the caller's RUSTFLAGS: {flags:?}"
+                ),
+                None => assert!(
+                    flags.is_empty(),
+                    "`make {target}` assigns {flags:?} unasked"
+                ),
+            }
         }
     }
 }
