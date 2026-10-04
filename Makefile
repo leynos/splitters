@@ -32,8 +32,9 @@ BUILD_HOST_OS ?= $(shell uname -s)
 # contain `-linux-` but report `target_os = "android"`, so they are not Linux.
 STANDARD_TARGET_IS_LINUX = $(if $(CARGO_BUILD_TARGET),$(or $(filter host-tuple,$(CARGO_BUILD_TARGET)),$(and $(findstring -linux-,$(CARGO_BUILD_TARGET)),$(if $(findstring -android,$(CARGO_BUILD_TARGET)),,yes))),yes)
 STANDARD_RUSTFLAGS = $(STANDARD_THREADS_FLAG)$(if $(filter Linux,$(BUILD_HOST_OS)),$(if $(STANDARD_TARGET_IS_LINUX), $(STANDARD_MOLD_FLAG)))
-# Release builds take neither flag: assigning `RUSTFLAGS`, even to an empty
-# inherited value, displaces every `rustflags` source in the configuration.
+# Release builds add neither standard flag: assigning `RUSTFLAGS`, even to an
+# empty inherited value, displaces every `rustflags` source in the
+# configuration, and a caller's own value passes through untouched.
 RELEASE_RUSTFLAGS = RUSTFLAGS="$${RUSTFLAGS-}"
 # Debug builds keep a caller's exported flags and add the standard ones,
 # since an inherited `RUSTFLAGS` would otherwise displace the configuration.
