@@ -25,7 +25,7 @@ jobs:
         uses: >-
           leynos/shared-actions/.github/actions/install-mdtablefix@4fb8eb7ad52454678a0662865d81d3cd17aa6e0e
         with:
-          version: '0.6.0'
+          version: '0.6.1'
       - name: Format
         run: make check-fmt
       - name: Markdown lint

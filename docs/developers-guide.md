@@ -366,12 +366,12 @@ Markdown follows the estate's `markdown-formatting-baseline` rule.
 - `.markdownlint-cli2.jsonc` carries the canonical markdownlint configuration.
   Keep its `config` entries and `ignores` globs; add repository-specific rules
   or globs beside them.
-- CI installs mdtablefix 0.6.0 with the shared `install-mdtablefix` action
+- CI installs mdtablefix 0.6.1 with the shared `install-mdtablefix` action
   before `make check-fmt`, and lints Markdown with
   `DavidAnson/markdownlint-cli2-action` over `**/*.md`.
 
 Install mdtablefix 0.6.0 or later locally with
-`cargo binstall --no-confirm mdtablefix@0.6.0`, or
-`cargo install --locked mdtablefix@0.6.0`. Install markdownlint-cli2 with
+`cargo binstall --no-confirm mdtablefix@0.6.1`, or
+`cargo install --locked mdtablefix@0.6.1`. Install markdownlint-cli2 with
 `bun add --global markdownlint-cli2` or
 `npm install --global markdownlint-cli2`.
