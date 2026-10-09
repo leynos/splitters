@@ -16,14 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@6cec89bac47a21cf756d68d638a9a510998e57f8
+        uses: leynos/shared-actions/.github/actions/setup-rust@5bc2b2611f5921ef2c56e4ee3fde2b879a319361
         with:
           expect-cache: any
       - name: Install mdtablefix
         # `make check-fmt` runs `mdtablefix --check --git`; 0.6.0 is the
         # first release with `--check` and `--git`.
         uses: >-
-          leynos/shared-actions/.github/actions/install-mdtablefix@0606ca899ce2995a0c4bc78e660e80832e6e8855
+          leynos/shared-actions/.github/actions/install-mdtablefix@5bc2b2611f5921ef2c56e4ee3fde2b879a319361
         with:
           version: '0.6.1'
       - name: Format
@@ -41,7 +41,7 @@ jobs:
       - name: Lint
         run: make lint
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@f9f1c863c8a5bef64aa6779caa746e1a4a6c1ad4
+        uses: leynos/shared-actions/.github/actions/generate-coverage@5bc2b2611f5921ef2c56e4ee3fde2b879a319361
         env:
           # The development profile selects Cranelift, which cannot build
           # `-Cinstrument-coverage`; the test profile inherits it. The
@@ -57,7 +57,7 @@ jobs:
         env:
           CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN }}
         if: ${{ env.CS_ACCESS_TOKEN }}
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@f9f1c863c8a5bef64aa6779caa746e1a4a6c1ad4
+        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@5bc2b2611f5921ef2c56e4ee3fde2b879a319361
         with:
           format: lcov
           access-token: ${{ env.CS_ACCESS_TOKEN }}
