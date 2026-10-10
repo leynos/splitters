@@ -16,14 +16,14 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
       - name: Setup Rust
-        uses: leynos/shared-actions/.github/actions/setup-rust@6cec89bac47a21cf756d68d638a9a510998e57f8
+        uses: leynos/shared-actions/.github/actions/setup-rust@cabf105ae230e3759cf77b1c2d1d73ea0b67e9a9
         with:
           expect-cache: any
       - name: Install mdtablefix
         # `make check-fmt` runs `mdtablefix --check --git`; 0.6.0 is the
         # first release with `--check` and `--git`.
         uses: >-
-          leynos/shared-actions/.github/actions/install-mdtablefix@0606ca899ce2995a0c4bc78e660e80832e6e8855
+          leynos/shared-actions/.github/actions/install-mdtablefix@cabf105ae230e3759cf77b1c2d1d73ea0b67e9a9
         with:
           version: '0.6.1'
       - name: Format
