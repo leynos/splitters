@@ -40,8 +40,16 @@ jobs:
           sudo apt-get install --yes --no-install-recommends mold
       - name: Lint
         run: make lint
+      - name: Setup uv
+        uses: astral-sh/setup-uv@b06acff4b6a41bdd9cdac56507ead0bd7734e757
+        with:
+          # A Rust-only repository has no Python dependency manifest for the
+          # cache key, so caching would only warn about unmatched inputs.
+          enable-cache: false
+      - name: Workflow contract tests
+        run: make test-workflow-contracts
       - name: Test and Measure Coverage
-        uses: leynos/shared-actions/.github/actions/generate-coverage@f9f1c863c8a5bef64aa6779caa746e1a4a6c1ad4
+        uses: leynos/shared-actions/.github/actions/generate-coverage@cabf105ae230e3759cf77b1c2d1d73ea0b67e9a9
         env:
           # The development profile selects Cranelift, which cannot build
           # `-Cinstrument-coverage`; the test profile inherits it. The
@@ -53,12 +61,9 @@ jobs:
         with:
           output-path: lcov.info
           format: lcov
-      - name: Upload coverage data to CodeScene
-        env:
-          CS_ACCESS_TOKEN: ${{ secrets.CS_ACCESS_TOKEN }}
-        if: ${{ env.CS_ACCESS_TOKEN }}
-        uses: leynos/shared-actions/.github/actions/upload-codescene-coverage@f9f1c863c8a5bef64aa6779caa746e1a4a6c1ad4
-        with:
-          format: lcov
-          access-token: ${{ env.CS_ACCESS_TOKEN }}
-          installer-checksum: ${{ vars.CODESCENE_CLI_SHA256 }}
+          # The pull request measures coverage for its own ratchet check and
+          # nothing else: it neither publishes the report nor contacts
+          # CodeScene. Main owns both, in coverage-main.yml, and
+          # `make test-workflow-contracts` holds the split.
+          with-ratchet: 'true'
+          publish-artefact: 'false'
