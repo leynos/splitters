@@ -120,4 +120,4 @@ help: ## Show available targets
 
 test-workflow-contracts: ## Validate the CodeScene coverage workflow contract (CV-005)
 	$(CV005_CONTRACTS) check --repository .
-	uv run --with 'pytest>=8' --with 'pyyaml>=6' pytest tests/workflow_contracts -q
+	$(UV_ENV) $(UV) run --with 'pytest>=8' --with 'pyyaml>=6' pytest tests/workflow_contracts -q

@@ -93,3 +93,25 @@ def test_ci_runs_the_target_unconditionally() -> None:
     ]
     assert steps, f"ci.yml must run `make {TARGET}` in a step"
     assert all("if" not in step for step in steps), steps
+
+
+def test_both_contract_runs_use_the_configured_uv() -> None:
+    """Route the checker and the pytest run through ``UV`` and ``UV_ENV``.
+
+    A caller whose ``uv`` is not on ``PATH`` sets ``UV``; a run that calls a
+    literal ``uv`` would ignore it.
+    """
+    result = subprocess.run(
+        ["make", "-n", TARGET, "UV=/opt/injected/uv", "UV_ENV=INJECTED=1"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    runs = [
+        line
+        for line in result.stdout.splitlines()
+        if "cv005-contracts" in line or "pytest" in line
+    ]
+    assert len(runs) == 2, runs
+    assert all("INJECTED=1 /opt/injected/uv " in line for line in runs), runs
