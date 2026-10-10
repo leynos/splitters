@@ -27,10 +27,11 @@ name: Coverage (main)
 
 # One group per ref, never cancelled. A cancelled publisher abandons both its
 # upload and its baseline write. With cancellation off, runs never overlap and
-# a newer trigger replaces any pending run, so for triggered runs (push and
-# dispatch) uploads land in commit order and the newest baseline wins. Keying
-# the group on the event as well would let an earlier dispatch finish after a
-# newer push and upload older coverage last.
+# a newer trigger replaces any pending run. That bounds the overlap but does
+# not order runs by commit: a manual "Re-run jobs" on an older main run keeps
+# its old SHA and republishes that commit's coverage until the next push
+# supersedes it. Keying the group on the event as well would let an earlier
+# dispatch finish after a newer push and upload older coverage last.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
