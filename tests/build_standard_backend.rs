@@ -421,14 +421,15 @@ fn tool_directory(scratch: &str) -> Read<std::path::PathBuf> {
     Ok(root)
 }
 
-/// A missing Whitaker binary skips the check with a message and `make lint`
-/// still succeeds, since it is an optional tool; a present one that fails is
-/// covered above. `PATH` is a scratch directory holding only the system tools
-/// `make` needs, and `HOME` points at it, so neither an installed Whitaker nor
-/// the Makefile's `$HOME`-relative search paths can supply one.
+/// A missing Whitaker binary fails `make lint` with installation guidance, so a
+/// lint run cannot report green without the suite that CI enforces; a present
+/// one that fails is covered above. `PATH` is a scratch directory holding only
+/// the system tools `make` needs, and `HOME` points at it, so neither an
+/// installed Whitaker nor the Makefile's `$HOME`-relative search paths can
+/// supply one.
 #[cfg(unix)]
 #[test]
-fn a_missing_whitaker_skips_the_check_and_lint_succeeds() {
+fn a_missing_whitaker_fails_lint_with_installation_guidance() {
     let tools = tool_directory("whitaker-absent").expect("prepare the tool directory");
     let output = Command::new("make")
         .args(["lint", "CARGO=true", "WHITAKER=whitaker"])
@@ -447,16 +448,15 @@ fn a_missing_whitaker_skips_the_check_and_lint_succeeds() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        output.status.success(),
-        "`make lint` failed without Whitaker ({}): {stdout}{stderr}",
-        output.status
+        !output.status.success(),
+        "`make lint` succeeded without Whitaker: {stdout}{stderr}"
     );
     assert!(
-        stdout.contains("skipping whitaker lint"),
-        "no skip message in: {stdout}{stderr}"
+        stderr.contains("whitaker not found on PATH"),
+        "no missing-tool message in: {stdout}{stderr}"
     );
     assert!(
-        stdout.contains("Install whitaker"),
+        stderr.contains("whitaker-installer"),
         "no installation guidance in: {stdout}{stderr}"
     );
     assert!(
