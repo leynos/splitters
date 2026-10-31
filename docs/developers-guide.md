@@ -313,7 +313,7 @@ a Linux target links with `mold`, so install it before a `cargo` build or a
 `make` development target, build scripts included; `make release` and Make
 builds for a non-Linux target add no `mold`, though a caller's own `RUSTFLAGS`
 may still name it. Cranelift is the development-profile codegen backend: the
-whole suite passes under it on the pinned `nightly-2026-03-26`. Coverage holds
+whole suite passes under it on the pinned `nightly-2026-10-30`. Coverage holds
 the development profile on LLVM, because `-Cinstrument-coverage` is LLVM-only
 and the test profile inherits the development profile's backend.
 

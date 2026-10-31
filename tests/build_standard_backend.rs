@@ -114,8 +114,7 @@ fn step_containing<'a>(workflow: &'a str, needle: &str) -> Vec<&'a str> {
         });
     bounds
         .and_then(|range| lines.get(range))
-        .map(<[&str]>::to_vec)
-        .unwrap_or_default()
+        .map_or_else(Vec::new, <[&str]>::to_vec)
 }
 
 /// Returns the `key: value` entries of a step's own `env` mapping.
@@ -175,8 +174,7 @@ fn job_containing<'a>(workflow: &'a str, needle: &str) -> Vec<&'a str> {
         });
     bounds
         .and_then(|range| lines.get(range))
-        .map(<[&str]>::to_vec)
-        .unwrap_or_default()
+        .map_or_else(Vec::new, <[&str]>::to_vec)
 }
 
 /// Returns the offset of the first line that installs mold: an `apt` install
