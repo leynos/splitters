@@ -29,10 +29,10 @@ already exists in the current tree.
 
 Splitters should evolve into a library-first package with a thin command-line
 interface (CLI) wrapper. The binary should remain responsible only for command
-parsing, process exit behaviour, and human-facing terminal concerns. All
-repository operations, manifest handling, fragment matching, and extraction
-logic should live in library modules so they can be tested without spawning the
-binary.
+parsing, configuration resolution, process exit behaviour, and human-facing
+terminal concerns. All repository operations, manifest handling, fragment
+matching, and extraction logic should live in library modules so they can be
+tested without spawning the binary.
 
 For screen readers: The following flowchart shows the intended high-level
 module boundaries. The CLI enters through orchestrating library modules,
@@ -74,20 +74,23 @@ The dependency rule is strict:
 
 Table 1: Target module responsibilities.
 
-| Module     | Primary responsibility                                                                                           | Key inputs                                                         | Key outputs                                                                              |
-| ---------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
-| `cli`      | Parse commands, map results to exit codes, route stdout and stderr                                               | Process arguments, environment, library result values              | Structured command reports, exit status                                                  |
-| `manifest` | Load, validate, persist, and evolve manifest data                                                                | Manifest directory, serialized TOML and JSON, proposal identifiers | Typed manifest records, persistence side effects, schema diagnostics                     |
-| `diff`     | Materialize the change universe and emit fragments                                                               | Git repository state, base ref, merge base                         | Fragment records, patch payloads, metadata mirrors                                       |
-| `matching` | Rematch stored fragments against live repository state                                                           | Manifest fragment records, current diff state                      | Unique rematch results or stale and ambiguous-match errors                               |
-| `validate` | Prove replayability and subtraction safety in isolated worktrees                                                 | Rematched fragments, proposal selection, optional check command    | Validation report, candidate and residual proof outcomes                                 |
-| `extract`  | Create the extracted branch, subtract the validated patch set, update manifest lifecycle, and optionally publish | Validated proposal, target branch details, publish flag            | Extraction report, branch mutations, manifest updates, optional pull request side effect |
+| Module     | Primary responsibility                                                                                           | Key inputs                                                           | Key outputs                                                                              |
+| ---------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `cli`      | Resolve OrthoConfig-derived command configuration, map results to exit codes, route stdout and stderr            | Process arguments, environment, configuration files, library results | Structured command reports, exit status                                                  |
+| `manifest` | Load, validate, persist, and evolve manifest data                                                                | Manifest directory, serialized TOML and JSON, proposal identifiers   | Typed manifest records, persistence side effects, schema diagnostics                     |
+| `diff`     | Materialize the change universe and emit fragments                                                               | Git repository state, base ref, merge base                           | Fragment records, patch payloads, metadata mirrors                                       |
+| `matching` | Rematch stored fragments against live repository state                                                           | Manifest fragment records, current diff state                        | Unique rematch results or stale and ambiguous-match errors                               |
+| `validate` | Prove replayability and subtraction safety in isolated worktrees                                                 | Rematched fragments, proposal selection, optional check command      | Validation report, candidate and residual proof outcomes                                 |
+| `extract`  | Create the extracted branch, subtract the validated patch set, update manifest lifecycle, and optionally publish | Validated proposal, target branch details, publish flag              | Extraction report, branch mutations, manifest updates, optional pull request side effect |
 
 ### 3.1. `cli`
 
-`cli` should remain a translation layer. It should define the `clap` parser,
-convert argument combinations into typed command requests, and map domain
-results into the documented process exit codes.
+`cli` should remain a translation layer. It should define each command as a
+`clap`-derived argument struct that also derives `ortho_config::OrthoConfig`,
+so command-line parsing, configuration-file keys, environment variables, and
+defaults come from one declaration.[^3] It converts the resolved configuration
+into typed command requests and maps domain results into the documented process
+exit codes.
 
 Implementation guidance:
 
@@ -95,6 +98,9 @@ Implementation guidance:
   progress and advisory text belong on stderr.
 - Convert library errors into explicit exit code categories rather than
   printing raw debug output.
+- Declare each option once on the OrthoConfig-derived type. Do not add a
+  parallel configuration parser, and do not read environment variables by
+  hand.[^3]
 - Avoid placing repository logic, manifest parsing, or worktree mutation in the
   CLI layer.
 
@@ -362,6 +368,8 @@ boundary.
 
 [^1]: `docs/splitters-design.md`
 [^2]: `docs/roadmap.md`
+[^3]: `docs/ortho-config-users-guide.md`, the imported user's guide for
+  `leynos/ortho-config` v0.10.0
 
 ## Markdown formatting
 
