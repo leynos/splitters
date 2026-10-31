@@ -338,8 +338,9 @@ this workspace on a toolchain that need not carry the Cranelift component. The
 recipe sets `CARGO_UNSTABLE_CODEGEN_BACKEND=true` (the driver crate is outside
 the `[unstable]` table) and `CARGO_PROFILE_DEV_CODEGEN_BACKEND` from
 `WHITAKER_CODEGEN_BACKEND`, which defaults to `llvm`. A failing Whitaker run
-fails the target; a missing `whitaker` binary skips the check with a message.
-The coverage step in `ci.yml` sets the same two variables for the same reason.
+fails the target, and so does a missing `whitaker` binary: install it with
+`whitaker-installer` (CI uses the `install-whitaker` action). The coverage step
+in `ci.yml` sets the same two variables for the same reason.
 
 `tests/build_standard_contract.rs` (readers in
 `tests/build_standard/support.rs`) holds the configuration and the Makefile

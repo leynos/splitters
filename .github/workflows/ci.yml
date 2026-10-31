@@ -38,6 +38,10 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends mold
+      - name: Install Whitaker
+        uses: leynos/shared-actions/.github/actions/install-whitaker@5a99aed78ce68dcebd3052b75c31e6f173162b1e
+        with:
+          cranelift: 'true'
       - name: Lint
         run: make lint
       - name: Setup uv

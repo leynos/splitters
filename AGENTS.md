@@ -138,10 +138,13 @@ project:
 
     ```sh
     cargo clippy --workspace --all-targets --all-features -- -D warnings
+    whitaker --all -- --all-targets --all-features
     ```
 
-    linting every target with all features enabled and denying all Clippy
-    warnings.
+    linting every target with all features enabled, denying all Clippy
+    warnings, and running the Whitaker Dylint suite through its `whitaker`
+    wrapper. A missing `whitaker` fails the target; install it with
+    `whitaker-installer` and never call `cargo dylint` directly.
   - `make test` executes:
 
     ```sh

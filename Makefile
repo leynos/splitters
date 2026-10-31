@@ -88,13 +88,13 @@ target/%/$(TARGET): ## Build binary in debug or release mode
 lint: ## Run Clippy with warnings denied
 	$(GATE_RUSTFLAGS) RUSTDOCFLAGS="$(RUSTDOC_FLAGS)" $(CARGO) doc --no-deps
 	$(GATE_RUSTFLAGS) $(CARGO) clippy $(CLIPPY_FLAGS)
-	@# `if` rather than `&& ... ||`, so a failing Whitaker run fails the target
-	@# instead of falling through to the not-installed message.
-	@if command -v whitaker >/dev/null 2>&1; then \
-		CARGO_UNSTABLE_CODEGEN_BACKEND=true CARGO_PROFILE_DEV_CODEGEN_BACKEND=$(WHITAKER_CODEGEN_BACKEND) $(GATE_RUSTFLAGS) whitaker --all -- $(CARGO_FLAGS); \
-	else \
-		echo "whitaker not found on PATH; skipping whitaker lint. Install whitaker to run this check."; \
-	fi
+	@# A missing `whitaker` fails the target: skipping the check would let a
+	@# lint run report green without the suite that CI enforces.
+	@command -v whitaker >/dev/null 2>&1 || { \
+		echo "whitaker not found on PATH; install it with whitaker-installer (CI uses the install-whitaker action)" >&2; \
+		exit 1; \
+	}
+	CARGO_UNSTABLE_CODEGEN_BACKEND=true CARGO_PROFILE_DEV_CODEGEN_BACKEND=$(WHITAKER_CODEGEN_BACKEND) $(GATE_RUSTFLAGS) whitaker --all -- $(CARGO_FLAGS)
 
 typecheck: ## Type-check without building
 	$(GATE_RUSTFLAGS) $(CARGO) check $(CARGO_FLAGS)
