@@ -243,17 +243,17 @@ focused debugging session requires lower-level invocation.
 
 Table 2: Maintainer command surface.
 
-| Command             | Purpose                                                       |
-| ------------------- | ------------------------------------------------------------- |
-| `make check-fmt`    | Verify Rust formatting without modifying files                |
-| `make lint`         | Run Rustdoc, Clippy, and Whitaker when available              |
-| `make test`         | Run the configured test runner and documentation tests        |
-| `make all`          | Replay the main Rust gate stack: format check, lint, and test |
-| `make fmt`          | Apply Rust and Markdown formatting                            |
-| `make markdownlint` | Lint Markdown files                                           |
-| `make nixie`        | Validate Mermaid diagrams                                     |
-| `make build`        | Build the debug binary                                        |
-| `make release`      | Build the release binary                                      |
+| Command             | Purpose                                                            |
+| ------------------- | ------------------------------------------------------------------ |
+| `make check-fmt`    | Verify Rust formatting without modifying files                     |
+| `make lint`         | Run Rustdoc, Clippy, and Whitaker; fail if Whitaker is unavailable |
+| `make test`         | Run the configured test runner and documentation tests             |
+| `make all`          | Replay the main Rust gate stack: format check, lint, and test      |
+| `make fmt`          | Apply Rust and Markdown formatting                                 |
+| `make markdownlint` | Lint Markdown files                                                |
+| `make nixie`        | Validate Mermaid diagrams                                          |
+| `make build`        | Build the debug binary                                             |
+| `make release`      | Build the release binary                                           |
 
 The expected maintainer gate order for documentation and code changes in this
 repository is:
