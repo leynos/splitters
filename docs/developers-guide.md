@@ -320,8 +320,9 @@ and the test profile inherits the development profile's backend.
 The development profile also follows the dev-build footprint standard: it sets
 `incremental = false` and `debug = 0`, and `.cargo/config.toml` sets the native
 Cargo key `[unstable] embed-metadata = false`, which `nightly-2026-07-31` and
-later pins use to keep metadata out of build artefacts. Do not replace it with
-a raw `rustc` metadata flag; those broke build scripts.
+later pins use to avoid duplicated metadata in `.rlib` files; Cargo still
+produces the corresponding `.rmeta` metadata. Do not replace it with a raw
+`rustc` metadata flag; those broke build scripts.
 
 Cargo applies a single `rustflags` source rather than merging them, and an
 assigned `RUSTFLAGS` replaces every source. So each source repeats the frontend

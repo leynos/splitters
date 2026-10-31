@@ -16,7 +16,8 @@
 [unstable]
 codegen-backend = true
 # The dev-build footprint standard (DF-003): from `nightly-2026-07-31` the
-# native key keeps metadata out of the rlibs, replacing `no-embed-metadata`.
+# native key avoids duplicated metadata in the rlibs (Cargo still produces the
+# `.rmeta` files), replacing `no-embed-metadata`.
 embed-metadata = false
 
 [profile.dev]

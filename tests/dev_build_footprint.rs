@@ -1,8 +1,8 @@
 //! Contract tests for the dev-build footprint standard (DF-001 to DF-003).
 //!
 //! The default development profile must not keep incremental state or debug
-//! information, and the pinned nightly must keep metadata out of build
-//! artefacts through the native Cargo key rather than a raw `rustc` flag.
+//! information, and the pinned nightly must avoid duplicated metadata in
+//! `.rlib` files through the native Cargo key rather than a raw `rustc` flag.
 //! `nightly-2026-07-31` and later pins use `[unstable] embed-metadata = false`;
 //! the older `no-embed-metadata` key must not come back with them.
 //!
@@ -28,7 +28,7 @@ fn value_at<'a>(root: &'a toml::Value, path: &[&str]) -> Option<&'a toml::Value>
 }
 
 #[test]
-fn the_configuration_keeps_metadata_out_of_artefacts_with_the_native_key() {
+fn the_configuration_avoids_duplicated_rlib_metadata_with_the_native_key() {
     let config = read_toml(".cargo/config.toml").expect("read the Cargo configuration");
     assert_eq!(
         value_at(&config, &["unstable", "embed-metadata"]).and_then(toml::Value::as_bool),
