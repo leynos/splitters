@@ -6,6 +6,11 @@ practical delivery plan that stays aligned with `docs/splitters-design.md`.
 Tasks are written as concrete build increments with explicit dependencies and
 measurable finish lines.
 
+The design mandates `ortho-config` from `leynos/ortho-config` for command
+specification, argument parsing, and configuration layering. The imported
+`docs/ortho-config-users-guide.md` is the reference for every task that touches
+the command surface.
+
 ## 1. Core command and manifest foundation
 
 ### 1.1. Establish the executable command surface
@@ -16,12 +21,16 @@ first because every later workstream depends on predictable argument handling
 and error reporting.
 
 - [ ] 1.1.1. Replace the stub binary with the `map`, `validate`, and
-  `extract` command skeletons.[^1]
-  - Define the root `clap` parser and the three subcommands.
-  - Add typed arguments for base override, manifest directory, proposal
-    selection, branch naming, `--check`, and `--publish`.
-  - Success criteria: `splitters --help` documents the full command surface and
-    command parsing has snapshot or behaviour coverage.
+  `extract` command skeletons using `ortho-config`.[^1]
+  - Define the root parser and the three subcommands as `clap`-derived types
+    that also derive `ortho_config::OrthoConfig`.
+  - Declare typed configuration fields for base override, manifest directory,
+    proposal selection, branch naming, `--check`, and `--publish`.
+  - Do not hand-roll argument parsing or add a configuration schema separate
+    from the command declarations.
+  - Success criteria: `splitters --help` documents the full command surface,
+    command parsing has snapshot or behaviour coverage, and each option has a
+    single declared source. See `docs/ortho-config-users-guide.md`.
 - [ ] 1.1.2. Introduce top-level error and exit-code handling. Requires 1.1.1.
   [^2]
   - Define a domain error hierarchy for argument errors, repository-state
@@ -39,6 +48,14 @@ and error reporting.
     contract.
   - Success criteria: command tests cover clean, dirty, and missing-repository
     cases.
+- [ ] 1.1.4. Wire OrthoConfig discovery and precedence. Requires 1.1.1.[^1]
+  - Configure the `SPLITTERS_` prefix, the project configuration-file name, and
+    the environment-variable surface from the command declarations.
+  - Resolve every field from its default, the configuration file, the
+    environment, and the command line, in that order.
+  - Success criteria: injected-source tests prove the full precedence chain for
+    at least one field on each command without mutating the process
+    environment. See `docs/ortho-config-users-guide.md`.
 
 ### 1.2. Define the manifest and proposal schema
 
@@ -263,6 +280,8 @@ reflect the actual implemented contracts.
   - Add `docs/developers-guide.md` covering architecture references, test
     policy, and release workflow.
   - Update `README.md` with installation and quick-start guidance.
+  - Reference `docs/ortho-config-users-guide.md` from the command and
+    configuration documentation.
   - Success criteria: documentation examples match the implemented command
     surface.
 - [ ] 5.2.2. Add CI, release, and packaging support. Requires 5.1.2.

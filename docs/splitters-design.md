@@ -6,7 +6,7 @@
 - Scope: A deterministic command-line interface (CLI) for decomposing one Git
   branch diff into smaller proposals and extracted branches
 - Companion documents: `docs/documentation-style-guide.md`
-- Last updated: 2026-04-15
+- Last updated: 2026-10-31
 
 ## 1. Summary
 
@@ -92,6 +92,13 @@ The design assumes the following constraints are non-negotiable:
 - Publishing is optional and outside the core transaction boundary. The local
   extraction succeeds or fails independently of remote pull request
   creation.[^3]
+- The command-line surface, its parsing, and its configuration layering must
+  use `ortho-config` from `leynos/ortho-config`.[^6] A command is specified by a
+  `clap`-derived argument struct that also derives
+  `ortho_config::OrthoConfig`, and its fields are resolved from defaults,
+  configuration files, environment variables, and command-line arguments in
+  that order. Splitters must not hand-roll argument parsing or maintain a
+  second configuration schema alongside the command definition.
 
 ## 6. Architecture overview
 
@@ -130,16 +137,28 @@ Figure 1 shows the central design choice: Splitters does not keep long-lived
 runtime state. Each command reconstructs its decisions from repository state
 and the persisted manifest artefacts.
 
-Three execution boundaries matter:
+Four execution boundaries matter:
 
 - The Rust core owns repository discovery, diff inspection, manifest I/O,
   fragment matching, and commit orchestration.
+- The command-line boundary is declared with `ortho-config`. Each command's
+  inputs are fields on an OrthoConfig-derived struct, so one declaration
+  supplies the command-line flag, environment variable, configuration-file key,
+  and default for every option.[^6]
 - Git patch and worktree primitives provide the applicability and isolation
   guarantees that Splitters needs for safe dry runs and subtraction.[^4][^5]
 - GitHub publication is a thin optional wrapper around `gh pr create`, with
   `--base` and `--head` supplied explicitly to avoid ambiguous defaults.[^3]
 
 ## 7. Command contracts
+
+Each command's inputs are declared on an OrthoConfig-derived configuration
+struct with the shared `SPLITTERS_` prefix. The same field therefore defines
+the command-line flag, the environment variable, the configuration-file key,
+and the default value, and Splitters resolves them in the precedence order
+given in §5.[^6] The option names in the following tables identify the primary
+operator surface; the environment and file spellings are generated from the
+same declaration rather than maintained separately.
 
 ### 7.1 `map`
 
@@ -613,8 +632,13 @@ publication._
 
 Rust is an appropriate implementation language because Splitters needs a single
 portable binary, low-level Git manipulation, and strict control over error
-handling. `clap` derive macros provide a concise way to express the command and
-flag surface while still generating strong help output and typed parsing.[^6]
+handling. The command surface is specified with `ortho-config`: the root parser
+and each subcommand are `clap`-derived types that also derive
+`ortho_config::OrthoConfig`. That single declaration supplies typed
+command-line parsing, layered configuration from files and environment
+variables, and generated help.[^6] Splitters does not hand-roll argument
+parsing, and it does not maintain a configuration schema separate from the
+command definition.
 
 The design uses a hybrid Git integration strategy:
 
@@ -631,7 +655,9 @@ The design uses a hybrid Git integration strategy:
 The internal module split should follow the public responsibilities rather than
 the transport layer:
 
-- `cli` for argument parsing and exit-code mapping.
+- `cli` for OrthoConfig-derived command configuration and exit-code mapping.
+  Configuration discovery and merging stay in the derive-generated loader;
+  `cli` turns the resolved configuration into typed command requests.
 - `manifest` for schema and proposal validation.
 - `diff` for fragment construction and fingerprinting.
 - `matching` for rematching stale manifests against the current change universe.
@@ -644,11 +670,11 @@ Splitters needs three layers of verification.
 
 Table 10: Verification layers.
 
-| Layer               | Purpose                                                                                                     |
-| ------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Unit tests          | Fingerprint generation, proposal graph validation, overlap detection, manifest round-trips                  |
-| Integration tests   | End-to-end `map`, `validate`, and `extract` flows in temporary repositories                                 |
-| Regression fixtures | Edge cases such as pure renames, binary files, mode-only changes, empty-file changes, and rebased manifests |
+| Layer               | Purpose                                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| Unit tests          | Fingerprint generation, proposal graph validation, overlap detection, manifest round-trips, and configuration precedence |
+| Integration tests   | End-to-end `map`, `validate`, and `extract` flows in temporary repositories                                              |
+| Regression fixtures | Edge cases such as pure renames, binary files, mode-only changes, empty-file changes, and rebased manifests              |
 
 The highest-risk properties are behavioural rather than algorithmic:
 
@@ -657,6 +683,9 @@ The highest-risk properties are behavioural rather than algorithmic:
 - Reverse subtraction must remove only the selected proposal.
 - The same proposal must produce identical patch payloads when repository state
   is unchanged.
+- Every command's configuration must resolve from one OrthoConfig declaration,
+  with a command-line value overriding the environment, the environment
+  overriding the configuration file, and the file overriding the default.[^6]
 
 Property-style tests are appropriate for overlap and subtraction invariants.
 For example, the union of the extracted proposal and the residual patch should
@@ -721,9 +750,11 @@ justify the design constraints and implementation choices in this document.
 [^5]: Git documentation for `git-worktree`, which describes linked worktrees,
   per-worktree `HEAD` and index state, and add/remove lifecycle behaviour.
   Accessed 2026-04-15. <https://git-scm.com/docs/git-worktree>
-[^6]: `clap` derive reference, which documents `Parser`, `Subcommand`, and
-  doc-comment-driven help generation for typed CLI surfaces. Accessed
-  2026-04-15. <https://docs.rs/clap/latest/clap/_derive/index.html>
+[^6]: `leynos/ortho-config` user's guide, imported at tag v0.10.0 as
+  `docs/ortho-config-users-guide.md`, documents the derive-based configuration
+  model, the defaults-file-environment-command-line precedence order, and the
+  generated CLI surface built on `clap`. Accessed 2026-10-31.
+  <https://github.com/leynos/ortho-config/tree/v0.10.0>
 [^7]: `git2::Repository` documentation, which exposes repository apply,
   apply-to-tree, and worktree operations used by the Rust core. Accessed
   2026-04-15. <https://docs.rs/git2/latest/git2/struct.Repository.html>
