@@ -209,14 +209,15 @@ fn ci_installs_mold_before_lint_and_coverage() {
 /// until the next step begins.
 fn install_whitaker_step(job: &[&str]) -> Option<Vec<String>> {
     let start = offset_of(job, "install-whitaker@")?;
-    let mut lines = vec![job[start].to_owned()];
-    lines.extend(
-        job[start + 1..]
-            .iter()
-            .take_while(|line| !line.trim_start().starts_with("- "))
-            .map(|line| (*line).to_owned()),
-    );
-    Some(lines)
+    let mut tail = job.iter().skip(start);
+    let first = tail.next()?;
+    let rest = tail.take_while(|line| !line.trim_start().starts_with("- "));
+    Some(
+        std::iter::once(first)
+            .chain(rest)
+            .map(|line| (*line).to_owned())
+            .collect(),
+    )
 }
 
 #[test]
@@ -225,12 +226,13 @@ fn ci_installs_whitaker_with_cranelift_before_lint() {
     let job = job_containing(&workflow, "generate-coverage@");
     let step = install_whitaker_step(&job).expect("the job never installs Whitaker");
 
-    let pin = step[0]
-        .split_once("install-whitaker@")
-        .map(|(_, rest)| rest.split_whitespace().next().unwrap_or_default())
+    let pin: String = step
+        .iter()
+        .find_map(|line| line.split_once("install-whitaker@"))
+        .map(|(_, rest)| rest.chars().take_while(char::is_ascii_hexdigit).collect())
         .unwrap_or_default();
     assert!(
-        pin.len() == 40 && pin.chars().all(|c| c.is_ascii_hexdigit()),
+        pin.len() == 40,
         "install-whitaker must be pinned to a full commit SHA, not `{pin}`"
     );
     assert!(
