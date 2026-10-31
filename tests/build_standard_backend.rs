@@ -229,8 +229,9 @@ fn ci_installs_whitaker_with_cranelift_before_lint() {
     let pin: String = step
         .iter()
         .find_map(|line| line.split_once("install-whitaker@"))
-        .map(|(_, rest)| rest.chars().take_while(char::is_ascii_hexdigit).collect())
-        .unwrap_or_default();
+        .map_or_else(String::new, |(_, rest)| {
+            rest.chars().take_while(char::is_ascii_hexdigit).collect()
+        });
     assert!(
         pin.len() == 40,
         "install-whitaker must be pinned to a full commit SHA, not `{pin}`"
