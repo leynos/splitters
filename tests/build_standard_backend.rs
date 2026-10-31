@@ -205,6 +205,50 @@ fn ci_installs_mold_before_lint_and_coverage() {
     }
 }
 
+/// The lines of the `install-whitaker` step: its `uses:` line and what follows
+/// until the next step begins.
+fn install_whitaker_step(job: &[&str]) -> Option<Vec<String>> {
+    let start = offset_of(job, "install-whitaker@")?;
+    let mut tail = job.iter().skip(start);
+    let first = tail.next()?;
+    let rest = tail.take_while(|line| !line.trim_start().starts_with("- "));
+    Some(
+        std::iter::once(first)
+            .chain(rest)
+            .map(|line| (*line).to_owned())
+            .collect(),
+    )
+}
+
+#[test]
+fn ci_installs_whitaker_with_cranelift_before_lint() {
+    let workflow = read(".github/workflows/ci.yml").expect("read ci.yml");
+    let job = job_containing(&workflow, "generate-coverage@");
+    let step = install_whitaker_step(&job).expect("the job never installs Whitaker");
+
+    let pin: String = step
+        .iter()
+        .find_map(|line| line.split_once("install-whitaker@"))
+        .map_or_else(String::new, |(_, rest)| {
+            rest.chars().take_while(char::is_ascii_hexdigit).collect()
+        });
+    assert!(
+        pin.len() == 40,
+        "install-whitaker must be pinned to a full commit SHA, not `{pin}`"
+    );
+    assert!(
+        step.iter().any(|line| {
+            let squeezed: String = line.split_whitespace().collect();
+            squeezed == "cranelift:'true'" || squeezed == "cranelift:true"
+        }),
+        "the development profile selects Cranelift, so install-whitaker must pass `cranelift: \
+         'true'`"
+    );
+    let installed = offset_of(&job, "install-whitaker@").expect("install step present");
+    let lint = offset_of(&job, "make lint").expect("the job lacks a lint step");
+    assert!(installed < lint, "Whitaker is installed after `make lint`");
+}
+
 /// A workflow whose coverage step carries its overrides in `env`, as required.
 #[cfg(test)]
 const GOOD_WORKFLOW: &str = concat!(
@@ -421,14 +465,15 @@ fn tool_directory(scratch: &str) -> Read<std::path::PathBuf> {
     Ok(root)
 }
 
-/// A missing Whitaker binary skips the check with a message and `make lint`
-/// still succeeds, since it is an optional tool; a present one that fails is
-/// covered above. `PATH` is a scratch directory holding only the system tools
-/// `make` needs, and `HOME` points at it, so neither an installed Whitaker nor
-/// the Makefile's `$HOME`-relative search paths can supply one.
+/// A missing Whitaker binary fails `make lint` with installation guidance, so a
+/// lint run cannot report green without the suite that CI enforces; a present
+/// one that fails is covered above. `PATH` is a scratch directory holding only
+/// the system tools `make` needs, and `HOME` points at it, so neither an
+/// installed Whitaker nor the Makefile's `$HOME`-relative search paths can
+/// supply one.
 #[cfg(unix)]
 #[test]
-fn a_missing_whitaker_skips_the_check_and_lint_succeeds() {
+fn a_missing_whitaker_fails_lint_with_installation_guidance() {
     let tools = tool_directory("whitaker-absent").expect("prepare the tool directory");
     let output = Command::new("make")
         .args(["lint", "CARGO=true", "WHITAKER=whitaker"])
@@ -447,16 +492,15 @@ fn a_missing_whitaker_skips_the_check_and_lint_succeeds() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(
-        output.status.success(),
-        "`make lint` failed without Whitaker ({}): {stdout}{stderr}",
-        output.status
+        !output.status.success(),
+        "`make lint` succeeded without Whitaker: {stdout}{stderr}"
     );
     assert!(
-        stdout.contains("skipping whitaker lint"),
-        "no skip message in: {stdout}{stderr}"
+        stderr.contains("whitaker not found on PATH"),
+        "no missing-tool message in: {stdout}{stderr}"
     );
     assert!(
-        stdout.contains("Install whitaker"),
+        stderr.contains("whitaker-installer"),
         "no installation guidance in: {stdout}{stderr}"
     );
     assert!(

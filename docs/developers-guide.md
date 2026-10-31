@@ -243,17 +243,17 @@ focused debugging session requires lower-level invocation.
 
 Table 2: Maintainer command surface.
 
-| Command             | Purpose                                                       |
-| ------------------- | ------------------------------------------------------------- |
-| `make check-fmt`    | Verify Rust formatting without modifying files                |
-| `make lint`         | Run Rustdoc, Clippy, and Whitaker when available              |
-| `make test`         | Run the configured test runner and documentation tests        |
-| `make all`          | Replay the main Rust gate stack: format check, lint, and test |
-| `make fmt`          | Apply Rust and Markdown formatting                            |
-| `make markdownlint` | Lint Markdown files                                           |
-| `make nixie`        | Validate Mermaid diagrams                                     |
-| `make build`        | Build the debug binary                                        |
-| `make release`      | Build the release binary                                      |
+| Command             | Purpose                                                            |
+| ------------------- | ------------------------------------------------------------------ |
+| `make check-fmt`    | Verify Rust formatting without modifying files                     |
+| `make lint`         | Run Rustdoc, Clippy, and Whitaker; fail if Whitaker is unavailable |
+| `make test`         | Run the configured test runner and documentation tests             |
+| `make all`          | Replay the main Rust gate stack: format check, lint, and test      |
+| `make fmt`          | Apply Rust and Markdown formatting                                 |
+| `make markdownlint` | Lint Markdown files                                                |
+| `make nixie`        | Validate Mermaid diagrams                                          |
+| `make build`        | Build the debug binary                                             |
+| `make release`      | Build the release binary                                           |
 
 The expected maintainer gate order for documentation and code changes in this
 repository is:
@@ -345,8 +345,14 @@ this workspace on a toolchain that need not carry the Cranelift component. The
 recipe sets `CARGO_UNSTABLE_CODEGEN_BACKEND=true` (the driver crate is outside
 the `[unstable]` table) and `CARGO_PROFILE_DEV_CODEGEN_BACKEND` from
 `WHITAKER_CODEGEN_BACKEND`, which defaults to `llvm`. A failing Whitaker run
-fails the target; a missing `whitaker` binary skips the check with a message.
-The coverage step in `ci.yml` sets the same two variables for the same reason.
+fails the target, and so does a missing `whitaker` binary. Install it with
+`whitaker-installer`, following the
+[Whitaker users' guide](https://github.com/leynos/whitaker/blob/main/docs/users-guide.md);
+the installer places the `whitaker` wrapper in `~/.local/bin`, which must be on
+`PATH`. Never build the installer with `cargo install`, since that route is
+rejected by the estate's Whitaker provisioning rule. CI uses the
+`install-whitaker` action instead. The coverage step in `ci.yml` sets the same
+two variables for the same reason.
 
 `tests/build_standard_contract.rs` (readers in
 `tests/build_standard/support.rs`) holds the configuration and the Makefile
