@@ -205,6 +205,47 @@ fn ci_installs_mold_before_lint_and_coverage() {
     }
 }
 
+/// The lines of the `install-whitaker` step: its `uses:` line and what follows
+/// until the next step begins.
+fn install_whitaker_step(job: &[&str]) -> Option<Vec<String>> {
+    let start = offset_of(job, "install-whitaker@")?;
+    let mut lines = vec![job[start].to_owned()];
+    lines.extend(
+        job[start + 1..]
+            .iter()
+            .take_while(|line| !line.trim_start().starts_with("- "))
+            .map(|line| (*line).to_owned()),
+    );
+    Some(lines)
+}
+
+#[test]
+fn ci_installs_whitaker_with_cranelift_before_lint() {
+    let workflow = read(".github/workflows/ci.yml").expect("read ci.yml");
+    let job = job_containing(&workflow, "generate-coverage@");
+    let step = install_whitaker_step(&job).expect("the job never installs Whitaker");
+
+    let pin = step[0]
+        .split_once("install-whitaker@")
+        .map(|(_, rest)| rest.split_whitespace().next().unwrap_or_default())
+        .unwrap_or_default();
+    assert!(
+        pin.len() == 40 && pin.chars().all(|c| c.is_ascii_hexdigit()),
+        "install-whitaker must be pinned to a full commit SHA, not `{pin}`"
+    );
+    assert!(
+        step.iter().any(|line| {
+            let squeezed: String = line.split_whitespace().collect();
+            squeezed == "cranelift:'true'" || squeezed == "cranelift:true"
+        }),
+        "the development profile selects Cranelift, so install-whitaker must pass `cranelift: \
+         'true'`"
+    );
+    let installed = offset_of(&job, "install-whitaker@").expect("install step present");
+    let lint = offset_of(&job, "make lint").expect("the job lacks a lint step");
+    assert!(installed < lint, "Whitaker is installed after `make lint`");
+}
+
 /// A workflow whose coverage step carries its overrides in `env`, as required.
 #[cfg(test)]
 const GOOD_WORKFLOW: &str = concat!(
