@@ -85,7 +85,8 @@ Table 1: Target module responsibilities.
 
 ### 3.1. `cli`
 
-`cli` should remain a translation layer. It should define each command as a
+`cli` should remain a translation layer. It should define the root parser as a
+plain `clap` type that selects a subcommand, and each command as a
 `clap`-derived argument struct that also derives `ortho_config::OrthoConfig`,
 so command-line parsing, configuration-file keys, environment variables, and
 defaults come from one declaration.[^3] It converts the resolved configuration

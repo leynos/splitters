@@ -22,8 +22,9 @@ and error reporting.
 
 - [ ] 1.1.1. Replace the stub binary with the `map`, `validate`, and
   `extract` command skeletons using `ortho-config`.[^1]
-  - Define the root parser and the three subcommands as `clap`-derived types
-    that also derive `ortho_config::OrthoConfig`.
+  - Define the root parser as a `clap`-derived type, and each of the three
+    subcommands as a `clap`-derived argument struct that also derives
+    `ortho_config::OrthoConfig`.
   - Declare typed configuration fields for base override, manifest directory,
     proposal selection, branch naming, `--check`, and `--publish`.
   - Do not hand-roll argument parsing or add a configuration schema separate

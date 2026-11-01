@@ -633,7 +633,8 @@ publication._
 Rust is an appropriate implementation language because Splitters needs a single
 portable binary, low-level Git manipulation, and strict control over error
 handling. The command surface is specified with `ortho-config`: the root parser
-and each subcommand are `clap`-derived types that also derive
+is a `clap`-derived type that dispatches to the selected subcommand, and each
+subcommand's argument struct is a `clap`-derived type that also derives
 `ortho_config::OrthoConfig`. That single declaration supplies typed
 command-line parsing, layered configuration from files and environment
 variables, and generated help.[^6] Splitters does not hand-roll argument
