@@ -366,6 +366,7 @@ fn lint_with_script(scratch: &str, script: &str) -> Read<(Output, String)> {
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .env("PATH", &root)
         .env("WHITAKER", "/no/such/whitaker")
+        .env_remove("RUST_FLAGS")
         .env("WHITAKER_RECORD", root.join("record"))
         // The Makefile searches `$HOME`-relative tool directories too, so point
         // it at the scratch directory rather than a real home.
@@ -434,8 +435,12 @@ fn whitaker_builds_on_llvm_with_the_composed_flags() {
     );
     let flags = value("RUSTFLAGS").expect("Whitaker received no RUSTFLAGS");
     assert!(
-        flags.contains("-Zthreads=8"),
-        "Whitaker lost the frontend flag: {flags}"
+        flags.contains("-D warnings"),
+        "Whitaker lost the warning policy: {flags}"
+    );
+    assert!(
+        !flags.contains("-Zthreads") && !flags.contains("mold"),
+        "Whitaker received the development flags: {flags}"
     );
 }
 

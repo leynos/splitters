@@ -206,15 +206,16 @@ pub fn leading_assignments(command: &str) -> Read<(Vec<Assigned<'_>>, &str)> {
     Ok((found, rest))
 }
 
-/// Returns whether a command runs cargo or Whitaker, as opposed to naming one,
-/// as `command -v whitaker` or an `echo` of its path does.
+/// Returns whether a command runs cargo, as opposed to naming it, as an `echo`
+/// of its path does. Whitaker is deliberately not a gate build: its route
+/// assigns its own flags, which `build_standard_backend` checks.
 ///
 /// # Errors
 ///
 /// An unreadable leading assignment fails rather than hiding the command.
-pub fn runs_cargo_or_whitaker(command: &str) -> Read<bool> {
+pub fn runs_cargo(command: &str) -> Read<bool> {
     let (_, rest) = leading_assignments(command)?;
     let word = rest.split_whitespace().next().unwrap_or_default();
     let name = word.rsplit('/').next().unwrap_or(word);
-    Ok(matches!(name, "cargo" | "whitaker"))
+    Ok(name == "cargo")
 }

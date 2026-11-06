@@ -15,7 +15,7 @@ pub mod flags;
 mod shell;
 
 pub use flags::{Flags, LINUX_SELECTOR, LINUX_TABLES, MOLD_FLAG, Read, THREADS_FLAG, sources};
-use shell::{commands, leading_assignments, runs_cargo_or_whitaker};
+use shell::{commands, leading_assignments, runs_cargo};
 
 /// A host the Makefile can be read as, through its `BUILD_HOST_OS` override,
 /// optionally building for another target through `CARGO_BUILD_TARGET`.
@@ -152,7 +152,7 @@ fn assignment(command: &str, inherited: Option<&str>) -> Read<Option<Flags>> {
     )))
 }
 
-/// Returns, for each cargo or whitaker command `make -n TARGET` would run on
+/// Returns, for each cargo command `make -n TARGET` would run on
 /// the host, the `RUSTFLAGS` it assigns (expanded under `inherited`), or
 /// `None` when it assigns none.
 pub fn make_rustflags(
@@ -167,7 +167,7 @@ pub fn make_rustflags(
     let mut found = Vec::new();
     for line in text.lines() {
         for command in self::commands(line).map_err(route)? {
-            if runs_cargo_or_whitaker(command).map_err(route)? {
+            if runs_cargo(command).map_err(route)? {
                 found.push(assignment(command, inherited).map_err(route)?);
             }
         }
