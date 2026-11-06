@@ -9,7 +9,7 @@ use super::{
     expand_value,
     flags::table_flags,
     make_rustflags,
-    shell::{commands, runs_cargo_or_whitaker},
+    shell::{commands, runs_cargo},
 };
 
 #[rstest]
@@ -25,15 +25,13 @@ fn commands_split_chained_and_branching_lines(#[case] line: &str, #[case] expect
 
 #[rstest]
 #[case("cargo test", true)]
-#[case(
-    "RUSTFLAGS=\"-D warnings\" PATH=\"/x:$PATH\" /bin/whitaker --all",
-    true
-)]
+#[case("RUSTFLAGS=\"-D warnings\" PATH=\"/x:$PATH\" /bin/cargo test", true)]
+#[case("RUSTFLAGS=\"-D warnings\" /bin/whitaker --all", false)]
 #[case("X='a b' cargo test", true)]
 #[case("command -v whitaker", false)]
 #[case("echo whitaker not found", false)]
-fn only_a_running_cargo_or_whitaker_counts(#[case] command: &str, #[case] expected: bool) {
-    assert_eq!(runs_cargo_or_whitaker(command).expect("read"), expected);
+fn only_a_running_cargo_counts(#[case] command: &str, #[case] expected: bool) {
+    assert_eq!(runs_cargo(command).expect("read"), expected);
 }
 
 #[test]

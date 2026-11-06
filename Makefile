@@ -47,7 +47,6 @@ GATE_RUSTFLAGS = RUSTFLAGS="$${RUSTFLAGS:+$$RUSTFLAGS }$(RUST_FLAGS) $(STANDARD_
 # check builds take LLVM. Dylint builds its driver in a crate outside this
 # repository, which the `[unstable]` table does not reach, so the override
 # also enables the unstable key there.
-WHITAKER_CODEGEN_BACKEND ?= llvm
 RUSTDOC_FLAGS ?=
 RUSTDOC_FLAGS := -D warnings $(RUSTDOC_FLAGS)
 CARGO_FLAGS ?= --all-targets --all-features
@@ -94,7 +93,7 @@ lint: ## Run Clippy with warnings denied
 		echo "whitaker not found on PATH; install it with whitaker-installer (CI uses the install-whitaker action)" >&2; \
 		exit 1; \
 	}
-	CARGO_UNSTABLE_CODEGEN_BACKEND=true CARGO_PROFILE_DEV_CODEGEN_BACKEND=$(WHITAKER_CODEGEN_BACKEND) $(GATE_RUSTFLAGS) whitaker --all -- $(CARGO_FLAGS)
+	CARGO_UNSTABLE_CODEGEN_BACKEND=true CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm RUSTFLAGS="-D warnings" whitaker --all -- $(CARGO_FLAGS)
 
 typecheck: ## Type-check without building
 	$(GATE_RUSTFLAGS) $(CARGO) check $(CARGO_FLAGS)
