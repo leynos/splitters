@@ -351,11 +351,10 @@ well. CI installs `mold` before the first gate target.
 this workspace on a toolchain that need not carry the Cranelift component. The
 recipe sets `CARGO_UNSTABLE_CODEGEN_BACKEND=true` (the driver crate is outside
 the `[unstable]` table) and `CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm`. It assigns
-`RUSTFLAGS` from `RUST_FLAGS`, which defaults to `-D warnings`, so the
-development frontend and mold flags do not reach Whitaker's own toolchain
-unless a caller passes them through `RUST_FLAGS`. A failing Whitaker run fails
-the target, and so does a missing `whitaker` binary. Install it with
-`whitaker-installer`, following the
+`RUSTFLAGS="-D warnings"` alone, so the development frontend and mold flags do
+not reach Whitaker's own toolchain. A failing Whitaker run fails the target,
+and so does a missing `whitaker` binary. Install it with `whitaker-installer`,
+following the
 [Whitaker users' guide](https://github.com/leynos/whitaker/blob/main/docs/users-guide.md);
 the installer places the `whitaker` wrapper in `~/.local/bin`, which must be on
 `PATH`. Never build the installer with `cargo install`, since that route is

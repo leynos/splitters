@@ -93,7 +93,7 @@ lint: ## Run Clippy with warnings denied
 		echo "whitaker not found on PATH; install it with whitaker-installer (CI uses the install-whitaker action)" >&2; \
 		exit 1; \
 	}
-	CARGO_UNSTABLE_CODEGEN_BACKEND=true CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm RUSTFLAGS="$(RUST_FLAGS)" whitaker --all -- $(CARGO_FLAGS)
+	CARGO_UNSTABLE_CODEGEN_BACKEND=true CARGO_PROFILE_DEV_CODEGEN_BACKEND=llvm RUSTFLAGS="-D warnings" whitaker --all -- $(CARGO_FLAGS)
 
 typecheck: ## Type-check without building
 	$(GATE_RUSTFLAGS) $(CARGO) check $(CARGO_FLAGS)
