@@ -375,8 +375,7 @@ fn lint_with_script(scratch: &str, script: &str) -> Read<(Output, String)> {
         .env("WHITAKER", "/no/such/whitaker")
         .env_remove("RUST_FLAGS")
         .env("WHITAKER_RECORD", root.join("record"))
-        // The Makefile searches `$HOME`-relative tool directories too, so point
-        // it at the scratch directory rather than a real home.
+        // Point `HOME` at the scratch directory rather than a real home.
         .env("HOME", &root)
         .env_remove("RUSTFLAGS")
         .env_remove("CARGO_BUILD_TARGET")
@@ -480,9 +479,8 @@ fn tool_directory(scratch: &str) -> Read<std::path::PathBuf> {
 /// A missing Whitaker binary fails `make lint` with installation guidance, so a
 /// lint run cannot report green without the suite that CI enforces; a present
 /// one that fails is covered above. `PATH` is a scratch directory holding only
-/// the system tools `make` needs, and `HOME` points at it, so neither an
-/// installed Whitaker nor the Makefile's `$HOME`-relative search paths can
-/// supply one.
+/// the system tools `make` needs, and `HOME` points at it, so an installed
+/// Whitaker cannot supply one.
 #[cfg(unix)]
 #[test]
 fn a_missing_whitaker_fails_lint_with_installation_guidance() {
