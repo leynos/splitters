@@ -360,8 +360,8 @@ fn lint_with_script(scratch: &str, script: &str) -> Read<(Output, String)> {
     options.write(true).create_new(true).mode(0o755);
     std::io::Write::write_all(&mut dir.open_with("whitaker", &options)?, script.as_bytes())?;
     let output = Command::new("make")
-        // `WHITAKER=whitaker` beats an inherited `WHITAKER`, which the bogus
-        // value below would otherwise make the recipe run.
+        // `WHITAKER=whitaker` is set on the command line, ahead of the bogus
+        // value the environment supplies below.
         // `INTERROGATE=true` replaces the Interrogate command, because `uv` is
         // not on this fake `PATH`.
         .args([
