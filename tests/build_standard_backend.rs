@@ -362,7 +362,14 @@ fn lint_with_script(scratch: &str, script: &str) -> Read<(Output, String)> {
     let output = Command::new("make")
         // `WHITAKER=whitaker` beats an inherited `WHITAKER`, which the bogus
         // value below would otherwise make the recipe run.
-        .args(["lint", "CARGO=true", "WHITAKER=whitaker"])
+        // `INTERROGATE=true` stubs the docstring gate, which needs `uv` outside
+        // this fake `PATH` and has its own coverage in `make interrogate`.
+        .args([
+            "lint",
+            "CARGO=true",
+            "WHITAKER=whitaker",
+            "INTERROGATE=true",
+        ])
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .env("PATH", &root)
         .env("WHITAKER", "/no/such/whitaker")
@@ -481,7 +488,14 @@ fn tool_directory(scratch: &str) -> Read<std::path::PathBuf> {
 fn a_missing_whitaker_fails_lint_with_installation_guidance() {
     let tools = tool_directory("whitaker-absent").expect("prepare the tool directory");
     let output = Command::new("make")
-        .args(["lint", "CARGO=true", "WHITAKER=whitaker"])
+        // `INTERROGATE=true` stubs the docstring gate, which needs `uv` outside
+        // this fake `PATH` and has its own coverage in `make interrogate`.
+        .args([
+            "lint",
+            "CARGO=true",
+            "WHITAKER=whitaker",
+            "INTERROGATE=true",
+        ])
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .env("WHITAKER", "/no/such/whitaker")
         .env("PATH", &tools)
