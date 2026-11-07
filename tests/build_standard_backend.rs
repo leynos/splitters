@@ -360,16 +360,22 @@ fn lint_with_script(scratch: &str, script: &str) -> Read<(Output, String)> {
     options.write(true).create_new(true).mode(0o755);
     std::io::Write::write_all(&mut dir.open_with("whitaker", &options)?, script.as_bytes())?;
     let output = Command::new("make")
-        // `WHITAKER=whitaker` beats an inherited `WHITAKER`, which the bogus
-        // value below would otherwise make the recipe run.
-        .args(["lint", "CARGO=true", "WHITAKER=whitaker"])
+        // `WHITAKER=whitaker` is set on the command line, ahead of the bogus
+        // value the environment supplies below.
+        // `INTERROGATE=true` replaces the Interrogate command, because `uv` is
+        // not on this fake `PATH`.
+        .args([
+            "lint",
+            "CARGO=true",
+            "WHITAKER=whitaker",
+            "INTERROGATE=true",
+        ])
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .env("PATH", &root)
         .env("WHITAKER", "/no/such/whitaker")
         .env_remove("RUST_FLAGS")
         .env("WHITAKER_RECORD", root.join("record"))
-        // The Makefile searches `$HOME`-relative tool directories too, so point
-        // it at the scratch directory rather than a real home.
+        // Point `HOME` at the scratch directory rather than a real home.
         .env("HOME", &root)
         .env_remove("RUSTFLAGS")
         .env_remove("CARGO_BUILD_TARGET")
@@ -473,15 +479,21 @@ fn tool_directory(scratch: &str) -> Read<std::path::PathBuf> {
 /// A missing Whitaker binary fails `make lint` with installation guidance, so a
 /// lint run cannot report green without the suite that CI enforces; a present
 /// one that fails is covered above. `PATH` is a scratch directory holding only
-/// the system tools `make` needs, and `HOME` points at it, so neither an
-/// installed Whitaker nor the Makefile's `$HOME`-relative search paths can
-/// supply one.
+/// the system tools `make` needs, and `HOME` points at it, so an installed
+/// Whitaker cannot supply one.
 #[cfg(unix)]
 #[test]
 fn a_missing_whitaker_fails_lint_with_installation_guidance() {
     let tools = tool_directory("whitaker-absent").expect("prepare the tool directory");
     let output = Command::new("make")
-        .args(["lint", "CARGO=true", "WHITAKER=whitaker"])
+        // `INTERROGATE=true` replaces the Interrogate command, because `uv` is
+        // not on this fake `PATH`.
+        .args([
+            "lint",
+            "CARGO=true",
+            "WHITAKER=whitaker",
+            "INTERROGATE=true",
+        ])
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .env("WHITAKER", "/no/such/whitaker")
         .env("PATH", &tools)
