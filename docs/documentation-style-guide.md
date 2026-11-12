@@ -25,8 +25,8 @@ consistent, and easy to maintain across projects.
   so quoting an identifier both documents its origin and exempts it from the
   Oxford-spelling check.
 - The project uses the filename `LICENSE` for community consistency.
-- Markdown prose is checked against this spelling policy with
-  [`typos`](https://github.com/crate-ci/typos).
+- Use [`typos`](https://github.com/crate-ci/typos) to check Markdown prose
+  against this spelling policy.
 
 ## Punctuation and grammar
 

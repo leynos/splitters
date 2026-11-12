@@ -13,6 +13,8 @@
 
 - [Developer's guide](developers-guide.md) describes the maintainer workflows
   and project conventions.
+- [Repository layout](repository-layout.md) describes the top-level paths and
+  their responsibilities.
 - [Documentation style guide](documentation-style-guide.md) defines the
   documentation structure, naming, and writing conventions.
 - [Scripting standards](scripting-standards.md) records repository standards
