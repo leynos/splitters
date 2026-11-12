@@ -23,7 +23,9 @@ ignores.
 ## Root files
 
 - `AGENTS.md` records contributor instructions for this repository.
-- `.gitignore` excludes build output and local Cargo lock files.
+- `.gitignore` excludes `target/`, `**/*.rs.bk`, and `*:Zone.Identifier`
+  files.
+- `Cargo.lock` is tracked and records resolved dependency versions.
 - `Cargo.toml` defines the package, dependencies, and lint configuration.
 - `Makefile` provides the development, validation, and release targets.
 - `rust-toolchain.toml` selects the Rust toolchain used by the repository.
