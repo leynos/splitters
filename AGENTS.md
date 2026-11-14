@@ -49,10 +49,11 @@
   document. When a decision is substantive, capture it in an Architectural
   Decision Record (ADR) following the documentation style guide, and reference
   that ADR from the design document.
-- **User-facing behaviour:** Update the users' guide for behaviour or
-  user-interface changes that users should know about. Add migration guidance
-  for compatibility or usage changes, and keep maintained translations
-  synchronized.
+- **User-facing behaviour:** Where the project has a users' guide, which the
+  documentation style guide canonically places at `docs/users-guide.md`, update
+  it for behaviour or user-interface changes that users should know about. Add
+  migration guidance for compatibility or usage changes, and keep maintained
+  translations synchronized.
 - **Internal interfaces:** Document internally facing interfaces in the
   relevant component architecture document. Document internally facing
   conventions and practices in [developers' guide](docs/developers-guide.md).
@@ -67,9 +68,9 @@
   stated guarantees against the implementation. Update maintained copies and
   indexes when names or locations change. Keep transient validation results in
   the PR or execution record.
-- **Decision history:** Preserve accepted ADR decisions; record subsequent
-  changes through the
-  [ADR amendment and supersession process](docs/documentation-style-guide.md#architectural-decision-records-adrs).
+- **Decision history:** Preserve accepted ADR decisions. Record a targeted
+  correction to an accepted ADR as described in the
+  [ADR section of the documentation style guide](docs/documentation-style-guide.md#architectural-decision-records-adrs).
   Capture proof-driven API, representation, and invariant decisions in the
   design documentation.
 - **Completed execplans:** Completed execplans are historical documents and
@@ -239,10 +240,15 @@ project:
     checking Python docstring coverage for `tests/` through `interrogate`, which
     needs `uv` on `PATH`. It then builds documentation, lints every target with
     all features enabled, and runs the Whitaker Dylint suite through its
-    `whitaker` wrapper on the LLVM codegen backend. Documentation warnings,
-    Clippy warnings, and Whitaker findings fail the target. A missing `whitaker`
-    fails the target; install it with `whitaker-installer` and never call
-    `cargo dylint` directly.
+    `whitaker` wrapper. Documentation warnings, Clippy warnings, and Whitaker
+    findings fail the target. A missing `whitaker` fails the target; install it
+    with `whitaker-installer` and never call `cargo dylint` directly.
+
+    The gate sets `RUSTFLAGS` to the caller's value, `-D warnings`, and the
+    build standard's `-Zthreads=8` flag (plus `mold` on Linux). `cargo doc`
+    also sets `RUSTDOCFLAGS` to `-D warnings`. `whitaker` takes
+    `RUSTFLAGS="-D warnings"` alone and the LLVM codegen backend, because its
+    Dylint driver builds outside this workspace.
   - `make test` executes:
 
     ```sh
@@ -253,7 +259,8 @@ project:
     running the full test suite with `cargo-nextest` when it is installed, and
     falling back to `cargo test --all-targets --all-features` otherwise. The
     doctest command runs only when nextest is used, because nextest does not run
-    doctests. Rust warnings are denied throughout. Use `make fmt`
+    doctests. Both commands run with the gate's `RUSTFLAGS`, which denies Rust
+    warnings and carries the build standard's flags. Use `make fmt`
     (`cargo +nightly fmt --all`) to apply formatting fixes reported by the
     formatter check.
   - `make test-workflow-contracts` runs the CV-005 contract check and the
