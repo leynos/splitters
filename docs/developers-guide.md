@@ -322,8 +322,10 @@ builds for a non-Linux target add no `mold`, though a caller's own `RUSTFLAGS`
 may still name it. LLVM is the default codegen backend: the estate standard
 dropped Cranelift, with review due 14 May 2027 (see the
 [concordat decision record](https://github.com/leynos/concordat/blob/main/docs/adrs/adr-0004-cranelift-is-not-part-of-the-rust-build-standard.md)).
-The Cranelift selection in `.cargo/config.toml` is commented out. To opt in,
-pass `--config 'profile.dev.codegen-backend="cranelift"'`; Cranelift does not
+The Cranelift selection in `.cargo/config.toml` is commented out; uncommenting
+it is a persistent opt-in and must come with an update to the contract in
+`tests/build_standard_backend.rs`. For a one-off opt-in, pass
+`--config 'profile.dev.codegen-backend="cranelift"'`; Cranelift does not
 unwind, so no test may rely on a caught panic under it. An inherited
 `CARGO_PROFILE_*_CODEGEN_BACKEND` can still select it. Coverage holds the
 development profile on LLVM, because `-Cinstrument-coverage` is LLVM-only and

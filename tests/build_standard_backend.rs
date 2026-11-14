@@ -246,8 +246,7 @@ fn ci_installs_whitaker_with_cranelift_before_lint() {
             let squeezed: String = line.split_whitespace().collect();
             squeezed == "cranelift:'true'" || squeezed == "cranelift:true"
         }),
-        "the development profile selects Cranelift, so install-whitaker must pass `cranelift: \
-         'true'`"
+        "install-whitaker keeps the Cranelift support input, so it must pass `cranelift: 'true'`"
     );
     let installed = offset_of(&job, "install-whitaker@").expect("install step present");
     let lint = offset_of(&job, "make lint").expect("the job lacks a lint step");
