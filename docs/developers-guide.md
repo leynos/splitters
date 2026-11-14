@@ -319,10 +319,17 @@ gets it. Every `rustflags` source enables the parallel `rustc` frontend with
 a Linux target links with `mold`, so install it before a `cargo` build or a
 `make` development target, build scripts included; `make release` and Make
 builds for a non-Linux target add no `mold`, though a caller's own `RUSTFLAGS`
-may still name it. Cranelift is the development-profile codegen backend: the
-whole suite passes under it on the pinned `nightly-2026-10-30`. Coverage holds
-the development profile on LLVM, because `-Cinstrument-coverage` is LLVM-only
-and the test profile inherits the development profile's backend.
+may still name it. LLVM is the default codegen backend: the estate standard
+dropped Cranelift, with review due 14 May 2027 (see the
+[concordat decision record](https://github.com/leynos/concordat/blob/main/docs/adrs/adr-0004-cranelift-is-not-part-of-the-rust-build-standard.md)).
+The Cranelift selection in `.cargo/config.toml` is commented out; uncommenting
+it is a persistent opt-in and must come with an update to the contract in
+`tests/build_standard_backend.rs`. For a one-off opt-in, pass
+`--config 'profile.dev.codegen-backend="cranelift"'`; Cranelift does not
+unwind, so no test may rely on a caught panic under it. An inherited
+`CARGO_PROFILE_*_CODEGEN_BACKEND` can still select it. Coverage holds the
+development profile on LLVM, because `-Cinstrument-coverage` is LLVM-only and
+the test profile inherits the development profile's backend.
 
 The development profile also follows the dev-build footprint standard: it sets
 `incremental = false` and `debug = 0`, and `.cargo/config.toml` sets the native
