@@ -269,8 +269,19 @@ repository is:
 2. `make markdownlint` for documentation changes.
 3. `make nixie` when Mermaid diagrams are added or changed.
 4. `make check-fmt`
-5. `make lint`
+5. `make lint` (see [Process-wide state in tests](#process-wide-state-in-tests))
 6. `make test`
+
+### Process-wide state in tests
+
+`clippy.toml` disallows `std::env::set_var`, `std::env::remove_var` and
+`std::env::set_current_dir`, and `make lint` fails on any unsuppressed call. A
+test that changes the process-wide environment or working directory forces the
+runner to serialize tests. Inject an environment object (`mockable::Env`, or a
+narrow closure seam where a trait object would be disproportionate), pass a
+directory in, or isolate the change to a child process with `Command::env` and
+`Command::current_dir`. Do not suppress these entries for in-process test
+mutation. The testing policy is in [`AGENTS.md`](../AGENTS.md#testing).
 
 Contributors should tee command output to `/tmp` logs during substantial work
 so gate evidence survives long output truncation. The repository has repeatedly
