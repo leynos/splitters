@@ -8,9 +8,8 @@ allow-expect-in-tests = true
 
 # Tests must not change the process-wide environment or working directory: it
 # forces the runner to serialize them. Inject an environment object or isolate
-# the change to a subprocess (`Command::env`, `Command::current_dir`). A site that
-# cannot yet migrate carries `#[expect(clippy::disallowed_methods, reason = ...)]`,
-# which reports itself once the site is gone.
+# the change to a subprocess (`Command::env`, `Command::current_dir`). Do not
+# suppress these entries for in-process test mutation.
 disallowed-methods = [
     { path = "std::env::set_var", reason = "process-wide env mutation; inject an environment or use a subprocess" },
     { path = "std::env::remove_var", reason = "process-wide env mutation; inject an environment or use a subprocess" },
