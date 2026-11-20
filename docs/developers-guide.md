@@ -400,7 +400,7 @@ boundary.
 [^1]: `docs/splitters-design.md`
 [^2]: `docs/roadmap.md`
 [^3]: `docs/ortho-config-users-guide.md`, the imported user's guide for
-  `leynos/ortho-config` v0.10.0
+  `leynos/ortho-config` v0.11.0
 
 ## Markdown formatting
 
