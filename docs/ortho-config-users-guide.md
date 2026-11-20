@@ -5,7 +5,7 @@ application. OrthoConfig describes settings as a Rust struct, then loads that
 struct from defaults, a configuration file, environment variables, and
 command-line arguments.
 
-This guide is for application authors using OrthoConfig v0.10.0. It starts with
+This guide is for application authors using OrthoConfig v0.11.0. It starts with
 a small working CLI and grows it one practical task at a time. Each section
 builds on the ones before it, so reading in order works well, but every section
 also stands on its own. Stop as soon as the application has what it needs.
@@ -50,7 +50,7 @@ subcommand parser:
 ```toml
 [dependencies]
 clap = { version = "4.5", features = ["derive"] }
-ortho_config = "0.10.0"
+ortho_config = "0.11.0"
 serde = { version = "1.0", features = ["derive"] }
 ```
 
@@ -58,6 +58,13 @@ The default features support TOML and the JSON-backed merge machinery used by
 the derive. Optional `json5`, `yaml`, and `metrics` features are covered later.
 OrthoConfig re-exports its derive macros, so a separate `ortho_config_macros`
 dependency is not needed.
+
+Depending on the published crate needs no special toolchain; the supported
+minimum Rust version is 1.89.0. Building OrthoConfig from a source checkout has
+extra prerequisites: the checkout pins a dated nightly toolchain, and Linux
+builds also need the `mold` linker. The
+[developers' guide](https://github.com/leynos/ortho-config/blob/v0.11.0/docs/developers-guide.md#development-build-standard)
+explains how to install and verify them.
 
 ## Build the first layered CLI
 
@@ -649,7 +656,7 @@ already work in that format:
 <!-- tested-example: guide-yaml-install -->
 ```toml
 [dependencies]
-ortho_config = { version = "0.10.0", features = ["yaml"] }
+ortho_config = { version = "0.11.0", features = ["yaml"] }
 ```
 
 YAML uses YAML 1.2 semantics: legacy words such as `yes` and `on` remain
@@ -718,7 +725,7 @@ name, and the field.
 For an enum with many variants, derive `SelectedSubcommandMerge` on the enum
 and call `load_globals_and_merge_selected_subcommand`. The generated match
 keeps the entry point small; the
-[Hello World example](https://github.com/leynos/ortho-config/tree/v0.10.0/examples/hello_world)
+[Hello World example](https://github.com/leynos/ortho-config/tree/v0.11.0/examples/hello_world)
 uses this pattern.
 
 ### Let files override clap defaults
@@ -739,7 +746,7 @@ default from an explicit command-line value; without it, values in the parsed
 struct are treated as command-line input. The subcommand merge starts from the
 struct's `Default` implementation, so implement `Default` to agree with the
 clap defaults. The
-[v0.10.0 migration guide](https://github.com/leynos/ortho-config/blob/v0.10.0/docs/v0-10-0-migration-guide.md#infer-parser-faithful-string-defaults)
+[v0.10.0 migration guide](https://github.com/leynos/ortho-config/blob/v0.11.0/docs/v0-10-0-migration-guide.md#infer-parser-faithful-string-defaults)
 has a complete, tested example using `load()`.
 
 ### Keep parse-only commands separate
@@ -888,7 +895,7 @@ fn write_augmented_clap_error(error: &clap::Error) -> std::io::Result<()> {
   application-side set-up.
 
 The design rationale is recorded in
-[ADR-0004](https://github.com/leynos/ortho-config/blob/v0.10.0/docs/adrs/adr-0004-cargo-external-subcommand-entry-point.md).
+[ADR-0004](https://github.com/leynos/ortho-config/blob/v0.11.0/docs/adrs/adr-0004-cargo-external-subcommand-entry-point.md).
 
 ## Handle errors at the application boundary
 
@@ -1091,6 +1098,50 @@ fn main() {
 `ProcessEnv` remains the default, so production applications do not need to
 change. `EnvSource` deliberately supports lookup by name but not enumeration;
 discovery cannot accidentally scan or log unrelated environment values.
+`EnvSource` is **discovery-only**: it answers the configuration-path selector
+and the platform base-directory lookups, and does not replace the `APP_*`
+configuration-value merge layer, which is supplied separately as a
+`SharedScanEnvSource`.
+
+Discovery emits decision and outcome telemetry as it runs, but the events carry
+no environment values, raw paths, file contents, or configuration values. Each
+field is a bounded label such as `operation`, `outcome`, `source`, or
+`required`, so an operator can see which location won or was skipped without
+the log becoming a record of where the application looked or what it read. See
+[Add production diagnostics](#add-production-diagnostics) for how to install a
+subscriber.
+
+## Run test subprocesses under a deadline
+
+Tests that start another process need three things the standard library does
+not provide together: a deadline that does not move, capture of each output
+stream that never blocks the child, and a guarantee that no descendant outlives
+the test. The `ortho_config_test_helpers` crate supplies them through
+`ortho_config_test_helpers::process`.
+
+Call `run_with_deadline` when one command has its own budget: it takes the
+`Command`, a `Duration`, and a human-readable description, and returns the
+captured `Output`. Call `run_with_deadline_until` instead when an enclosing
+test sequence owns a shared deadline; the earlier of the two limits applies,
+and time already spent, including waiting for a caller-owned lock, is charged
+to the sequence budget. Both report a failure that names the description, the
+duration, and the scope whose budget expired, so a timeout reads as a failed
+budget rather than an opaque panic.
+
+The helpers own execution, cleanup, and capture only. The caller still builds
+the command, chooses its environment, serializes it against other tests, and
+interprets the returned status and output. Both streams are drained
+continuously while the child runs, so a chatty child cannot deadlock on a full
+pipe, and the returned `Output` carries everything the child wrote: the shared
+runners keep the complete output because callers report compiler diagnostics in
+full. Memory therefore grows with what the child writes, so a caller that
+starts a child with unbounded output must bound that output itself. Output
+activity does not extend a deadline.
+
+These helpers are test-only: use them from tests and test fixtures, never from
+production code. A test runner that needs its own diagnostics or capture policy
+uses the lower-level module for its platform rather than a second process-tree
+implementation.
 
 ## Resolve discovery and merging without process state
 
@@ -1138,6 +1189,53 @@ The example prints `port=9000`. No process variable is read: the discovery
 source handles named lookups, while the scan source supplies the merge layer.
 The ordinary `load()` and `load_from_iter()` methods continue to use the
 process environment.
+
+### Use one environment and inject the working directory
+
+Most tests want a single `MapEnv` behind both layers. The `_with_env` methods
+take one `Arc<E>` where `E` implements both traits, and wrap the two-source
+methods: `OrthoConfig::load_from_iter_with_env`, the generated
+`compose_layers_from_iter_with_env` and `load_with_profile_from_iter_with_env`,
+and `SubcmdConfigMerge::load_and_merge_with_env` with its
+`load_and_merge_with_matches_with_env` companion.
+
+`EnvSource` also answers `current_dir`, because the derived loaders search the
+working directory for project configuration files. The default reads the
+process working directory, so existing callers see no change. Pin it with
+`MapEnv::with_current_dir`, and a test names its fixture directory without
+changing the process's own:
+
+<!-- tested-example: guide-injected-working-directory -->
+```rust
+use ortho_config::{MapEnv, OrthoConfig, OrthoResult};
+use serde::{Deserialize, Serialize};
+use std::sync::Arc;
+
+#[derive(Debug, Deserialize, Serialize, OrthoConfig)]
+#[ortho_config(prefix = "ACME_")]
+struct Config {
+    #[ortho_config(default = 8080)]
+    port: u16,
+}
+
+fn main() -> OrthoResult<()> {
+    // A real test points this at a temporary directory holding `.acme.toml`.
+    let environment = Arc::new(
+        MapEnv::new()
+            .with_current_dir("/nonexistent/acme-project")
+            .with_var("ACME_PORT", "9000"),
+    );
+
+    let config = Config::load_from_iter_with_env(["acme"], environment)?;
+    println!("port={}", config.port);
+    Ok(())
+}
+```
+
+The example prints `port=9000`. An unpinned `MapEnv` keeps reporting the
+process working directory, so a hermetic test sets one explicitly, along with
+`XDG_CONFIG_HOME`, `XDG_CONFIG_DIRS` and `HOME` when it must exclude host
+configuration directories.
 
 ### Compose layers without deserializing
 
@@ -1228,6 +1326,10 @@ follows the same declarative rules as the process-backed provider:
 Providers that use `map()` or `filter_map()` cannot be injected, because
 arbitrary closures cannot be replayed against a `ScanEnvSource`; the
 source-aware path rejects them rather than silently changing the key mapping.
+Injection into `CsvEnv` uses `ScanEnvSource`, the merge-layer path completed
+under [#412](https://github.com/leynos/ortho-config/issues/412); supplying the
+merge layer through `EnvSource` remains out of scope, because that path
+requires enumeration, which `EnvSource` deliberately does not offer.
 
 ### Inject sources into a subcommand
 
@@ -1412,7 +1514,7 @@ that only needs Fluent lookup and formatting can depend on `ortho_l10n`
 directly and avoid configuration discovery, the derive macros, Figment, and
 Clap entirely. The types are the same ones `ortho_config` re-exports, so code
 that mixes imports from both names the same types and needs no adapter. See the
-[ortho_l10n README](https://github.com/leynos/ortho-config/blob/v0.10.0/ortho_l10n/README.md)
+[ortho_l10n README](https://github.com/leynos/ortho-config/blob/v0.11.0/ortho_l10n/README.md)
 for its API.
 
 ## Add production diagnostics
@@ -1463,13 +1565,18 @@ recorder:
 <!-- tested-example: guide-metrics-install -->
 ```toml
 [dependencies]
-ortho_config = { version = "0.10.0", features = ["metrics"] }
+ortho_config = { version = "0.11.0", features = ["metrics"] }
 ```
 
 The feature emits bounded counters for discovery, merging, and subcommand path
 resolution, such as `ortho_config.discovery.attempts` and
 `ortho_config.merge.outcomes`. OrthoConfig never installs a recorder, and
 enabling the feature does nothing visible until the application installs one.
+The facade is intended for library consumers as well as applications: a binary
+that already owns a recorder picks the counters up by enabling the feature,
+with no further wiring. The labels are closed vocabularies, never paths,
+variable values, application names, or error strings, so the emitted
+time-series stay bounded however the application is configured.
 
 ## Use an aliased dependency
 
@@ -1479,7 +1586,7 @@ that alias, which is useful in workspaces that reserve the canonical crate name:
 <!-- tested-example: guide-alias-install -->
 ```toml
 [dependencies]
-config_layer = { package = "ortho_config", version = "0.10.0" }
+config_layer = { package = "ortho_config", version = "0.11.0" }
 serde = { version = "1.0", features = ["derive"] }
 ```
 
@@ -1541,7 +1648,7 @@ fn main() {
 
 Or use `cargo-orthohelp` to emit intermediate representation (IR), Unix man
 pages, PowerShell help, compact agent context, or all formats. The
-[README](https://github.com/leynos/ortho-config/blob/v0.10.0/README.md#install-the-documentation-generator)
+[README](https://github.com/leynos/ortho-config/blob/v0.11.0/README.md#install-the-documentation-generator)
 explains how to install it. Point it at a package:
 
 <!-- tested-example: guide-orthohelp-command -->
@@ -1557,6 +1664,36 @@ available from the selected library or binary target. The default format is
 `ir`. `--format agent-context` writes `agent-context.json` and also emits the
 same compact JSON document to standard output, so a pipeline can consume it
 directly.
+
+## Collect bridge-cache metrics
+
+The optional `metrics` feature enables a counter for `cargo-orthohelp` bridge
+cache outcomes. It is new in v0.11.0, and the published v0.10.0 package does
+not carry it. Install it from a source checkout:
+
+<!-- tested-example: guide-orthohelp-bridge-cache-metrics -->
+```console
+cargo install --path cargo-orthohelp --features metrics
+```
+
+The counter is `cargo_orthohelp.bridge_cache.events`. Its bounded `operation`
+label is `lookup` or `publish`; its `outcome` label is `hit`, `miss`,
+`read_failed`, `unchanged`, `updated`, or `write_failed`.
+
+With the feature enabled, the standalone CLI installs a `tracing`-backed
+recorder at startup, so each counter update is written to standard error as a
+structured `tracing` event under the `cargo_orthohelp::metrics` target. Set
+`RUST_LOG=cargo_orthohelp::metrics=debug` to collect them with the rest of the
+tool's diagnostics. A process that installs its own `metrics` recorder before
+the CLI starts keeps it, because the CLI claims the process-wide recorder slot
+only when it is free, so an embedding application can export to its own sink.
+Without any recorder the metrics facade drops events, which is the behaviour a
+plain `cargo orthohelp` run without the feature keeps.
+
+The feature is additive and disabled by default; no migration is needed to keep
+using existing commands. For the upgrade summary, see the
+[bridge-cache metrics entry](https://github.com/leynos/ortho-config/blob/v0.11.0/docs/v0-11-0-migration-guide.md#6-collect-bridge-cache-metrics-from-the-cli)
+in the v0.11.0 migration guide.
 
 ## Generate every format at once
 
@@ -1645,7 +1782,7 @@ guarantee.
 running `--format ir`, `--format man`, `--format ps`, and
 `--format agent-context` one after another, and each format keeps its own
 output paths as a compatibility contract. The
-[cargo-orthohelp design](https://github.com/leynos/ortho-config/blob/v0.10.0/docs/cargo-orthohelp-design.md)
+[cargo-orthohelp design](https://github.com/leynos/ortho-config/blob/v0.11.0/docs/cargo-orthohelp-design.md)
 records those per-format paths and the versioning rule that protects them.
 
 ## Offer a compact contract to automation
@@ -1678,7 +1815,7 @@ replace command validation or grant an agent capabilities that the CLI does not
 have. Consumers should ignore unknown fields, so that later additive releases
 do not break them. For constructing and serializing these types from Rust, see
 the
-[API guide](https://github.com/leynos/ortho-config/blob/v0.10.0/docs/cargo-orthohelp-api-guide.md).
+[API guide](https://github.com/leynos/ortho-config/blob/v0.11.0/docs/cargo-orthohelp-api-guide.md).
 
 ### Advertise profile support
 
@@ -1774,6 +1911,117 @@ never infers these facts from command names or flags.
 `interaction = "non_interactive"` combined with a `bypass` declaration is a
 compile error: a command that never prompts has nothing to bypass.
 
+## Declare how a command renders its output
+
+Behaviour metadata says what a command _does_. Renderer metadata says how it
+_writes_, so an agent can tell whether a command has a machine-readable mode
+and whether its output changes with a human language. Declare each renderer in
+its own nested group:
+
+<!-- tested-example: guide-renderer-metadata -->
+```rust
+use ortho_config::{OrthoConfig, OrthoConfigDocs};
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Deserialize, Serialize, OrthoConfig)]
+#[ortho_config(
+    prefix = "APP_",
+    renderer(
+        human(
+            supported = true,
+            tty = "adapts",
+            colour = "auto",
+            width = "terminal",
+            field("message", localization = "localized"),
+            field("error_code", localization = "non_localized")
+        ),
+        machine(
+            supported = true,
+            tty = "independent",
+            colour = "never",
+            progress = "never",
+            width = "unbounded",
+            plain = "always",
+            stdout = "structured",
+            field("error_code", localization = "non_localized")
+        )
+    )
+)]
+struct GreetArgs {
+    /// Who to greet.
+    #[ortho_config(default = String::from("world"))]
+    name: String,
+}
+
+fn main() {
+    // In the IR each renderer record is optional: `None` means that renderer was
+    // never declared, which the agent-context wire contract later resolves to the
+    // legacy defaults.
+    if let Some(machine) = GreetArgs::get_doc_metadata()
+        .renderer
+        .and_then(|renderer| renderer.machine)
+    {
+        let fields: Vec<&str> = machine
+            .fields
+            .iter()
+            .map(|field| field.id.as_str())
+            .collect();
+        println!(
+            "machine={:?} stdout={:?} fields={fields:?}",
+            machine.supported, machine.stdout
+        );
+    }
+}
+```
+
+The example prints
+`machine=Some(true) stdout=Some(Structured) fields=["error_code"]`. The
+`Option` wrappers are the point: a field the command did not declare stays
+absent instead of defaulting to a claim. Both `human(...)` and `machine(...)`
+accept the same keys:
+
+- `supported = true` or `false` — whether this renderer exists at all;
+- `tty = "independent"`, `"adapts"`, or `"requires"` — how much the output
+  depends on stdout being a terminal;
+- `closed_stdin = "ignored"`, `"eof"`, or `"error"` — behaviour when stdin is
+  closed, which matters because agents rarely attach a terminal;
+- `colour`, `emoji`, `progress`, and `pager` — `"never"`, `"auto"`, or
+  `"always"`;
+- `width = "terminal"`, `"unbounded"`, or a column count such as `width = 80`;
+- `accessibility = "unspecified"` or `"text_equivalent"`;
+- `plain = "unsupported"`, `"available"`, or `"always"` — whether unadorned
+  output is available, which is not the same as colour being suppressed;
+- `stdout` and `stderr` — `"none"`, `"text"`, `"structured"`, or `"mixed"`;
+- `progress_inheritance` and `subprocess_inheritance` — `"allowed"` or
+  `"forbidden"`, stating whether progress reporting and subprocess output may
+  pass through directly rather than being captured or reformatted; and
+- `field("id", localization = "localized")` or `"non_localized"` — which output
+  fields may change with the human language and which are protocol data.
+
+Declaring a renderer is a claim, not a probe. The derive never inspects command
+names, flags, or whether a terminal is attached, and the tool never infers
+capabilities from them. Two conventions follow from that:
+
+- Omit anything you have not decided. An undeclared key is reported as absent,
+  never as a reassuring default, so a reader can tell "not claimed" from
+  "claimed to be off".
+- Declare each command separately. A subcommand does not inherit its parent's
+  renderer block, because sibling commands commonly differ: one may print prose
+  and another emit JSON.
+
+An annotated command reports its declaration through the documentation IR and,
+via `cargo-orthohelp`, through agent context as a `renderer` object with
+`human` and `machine` records. A command with no `renderer(...)` group still
+reports the legacy defaults — human supported, machine not — so adding this
+feature changed nothing for existing commands.
+
+Because the wire contract is additive, the JSON stays compatible. The Rust
+source API is not: constructing documentation IR or an `AgentCommand` by struct
+literal now needs the new field. Read
+[the changelog](https://github.com/leynos/ortho-config/blob/v0.11.0/CHANGELOG.md)
+for the exact field to name if you build those values yourself; applications
+that only derive the configuration need no change.
+
 ## Agent-native policy checking
 
 `cargo orthohelp --check-agent-native` runs an opt-in policy check against a
@@ -1784,6 +2032,9 @@ adopting the toolchain. Configure the policy under
 
 <!-- tested-example: guide-policy-config -->
 ```toml
+[package]
+version = "0.11.0"
+
 [package.metadata.ortho_config.policy]
 mode = "warn"
 
@@ -1949,18 +2200,23 @@ Annotate incrementally, starting with destructive commands:
 Each release with compatibility notes has a migration guide that separates
 required changes from improvements that can be adopted later:
 
+- [v0.11.0 migration
+  guide](https://github.com/leynos/ortho-config/blob/v0.11.0/docs/v0-11-0-migration-guide.md)
+  — from v0.10.0. Only Rust code that builds documentation IR or
+  `AgentCommand` literals needs a change; JSON, Fluent catalogues, and derived
+  configuration do not.
 - [v0.10.0 migration
-  guide](https://github.com/leynos/ortho-config/blob/v0.10.0/docs/v0-10-0-migration-guide.md)
+  guide](https://github.com/leynos/ortho-config/blob/v0.11.0/docs/v0-10-0-migration-guide.md)
   — from v0.9.0. Most applications need no code changes; review explicit
   command-line values that restate defaults, Fluent catalogue identifiers, and
   struct literals of `AgentContext` or `DocMetadata`.
 - [v0.9.0 migration
-  guide](https://github.com/leynos/ortho-config/blob/v0.10.0/docs/v0-9-0-migration-guide.md)
+  guide](https://github.com/leynos/ortho-config/blob/v0.11.0/docs/v0-9-0-migration-guide.md)
   — from v0.8.0, including the YAML 1.2 parser change and `load_first` error
   reporting.
 
 The
-[changelog](https://github.com/leynos/ortho-config/blob/v0.10.0/CHANGELOG.md)
+[changelog](https://github.com/leynos/ortho-config/blob/v0.11.0/CHANGELOG.md)
 lists every release's additions and fixes.
 
 ## A practical path from here
@@ -1977,7 +2233,7 @@ sections. A typical progression is:
 7. generate human and agent documentation once the command surface stabilizes.
 
 The
-[Hello World application](https://github.com/leynos/ortho-config/tree/v0.10.0/examples/hello_world)
+[Hello World application](https://github.com/leynos/ortho-config/tree/v0.11.0/examples/hello_world)
 demonstrates these pieces in a larger layout. Its public greeting command is
 `greet`: file settings use `[cmds.greet]`, and environment settings use
 `HELLO_WORLD_CMDS_GREET_<FIELD>`. The
