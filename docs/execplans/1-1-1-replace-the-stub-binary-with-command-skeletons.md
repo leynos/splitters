@@ -223,8 +223,9 @@ revision is recorded in `Revision note`.
   (see `Surprises & discoveries`), so later generated documentation could
   advertise a `--proposal` flag and un-namespaced environment variables.
   Severity: low for this item. Likelihood: certain. Mitigation: this item does
-  not consume that metadata; the issue is recorded for 1.1.4 and 5.2.2 and as
-  upstream feedback.
+  not consume that metadata; the issue is recorded for 1.1.4 and 5.2.2 and
+  upstream as
+  [leynos/ortho-config#717](https://github.com/leynos/ortho-config/issues/717).
 
 ## Progress
 
@@ -252,7 +253,8 @@ revision is recorded in `Revision note`.
   interpolated values, and OrthoConfig v0.11.0 has no option to disable them.
   Evidence: probe output; no `isolating` identifier in the
   `ortho_config-0.11.0` or `ortho_l10n-0.11.0` sources. Impact: structural
-  error assertions (see `Risks`); upstream feedback.
+  error assertions (see `Risks`); raised upstream as
+  [leynos/ortho-config#718](https://github.com/leynos/ortho-config/issues/718).
 - Observation: OrthoConfig's built-in clap-error catalogue ships `en-US` and
   `ja`; a `FluentLocalizer` built for `en-GB` still localizes clap errors,
   because `ortho_l10n` maps any `en` locale to its en-US catalogue. Evidence:
@@ -276,7 +278,8 @@ revision is recorded in `Revision note`.
   localization base. Evidence: second planning probe (see
   `Artefacts and notes`). Impact: this item does not derive or consume
   documentation metadata; 1.1.4 and 5.2.2 must not rely on it for subcommands
-  until upstream fixes it.
+  until upstream fixes it
+  ([leynos/ortho-config#717](https://github.com/leynos/ortho-config/issues/717)).
 
 ## Decision log
 
@@ -363,7 +366,9 @@ revision is recorded in `Revision note`.
   `cargo orthohelp` takes agent-context summaries only from `en-US` resources,
   and clap errors use OrthoConfig's en-US catalogue; roadmap 5.2.2 must choose
   between `--locale en-GB` with `locales = ["en-GB"]` metadata and an upstream
-  fix. Date/Author: 2026-11-20, planning agent (revised after review).
+  fix
+  ([leynos/ortho-config#719](https://github.com/leynos/ortho-config/issues/719)).
+  Date/Author: 2026-11-20, planning agent (revised after review).
 - D8. Decision: parsed commands dispatch to
   `CommandOutcome::NotYetImplemented(CommandName)`; the binary writes
   `splitters <command>: not implemented yet` to standard error and exits `2`.
@@ -1170,3 +1175,7 @@ issue in `Surprises & discoveries`.
   fixed; module paths moved to `src/cli/args/`; budgets were re-estimated (code
   1,700, documentation 550, files 32) and a CI-cost tolerance was added.
   Remaining work and milestone order are otherwise unchanged.
+- 2026-11-20: linked the three OrthoConfig findings to the upstream issues
+  filed at the user's request (#717 documentation metadata, #718 isolation
+  marks, #719 `cargo orthohelp` locale). No change to scope, decisions, or
+  milestones.
