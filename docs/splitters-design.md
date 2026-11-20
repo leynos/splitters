@@ -751,11 +751,11 @@ justify the design constraints and implementation choices in this document.
 [^5]: Git documentation for `git-worktree`, which describes linked worktrees,
   per-worktree `HEAD` and index state, and add/remove lifecycle behaviour.
   Accessed 2026-04-15. <https://git-scm.com/docs/git-worktree>
-[^6]: `leynos/ortho-config` user's guide, imported at tag v0.10.0 as
+[^6]: `leynos/ortho-config` user's guide, imported at tag v0.11.0 as
   `docs/ortho-config-users-guide.md`, documents the derive-based configuration
   model, the defaults-file-environment-command-line precedence order, and the
-  generated CLI surface built on `clap`. Accessed 2026-10-31.
-  <https://github.com/leynos/ortho-config/tree/v0.10.0>
+  generated CLI surface built on `clap`. Accessed 2026-11-20.
+  <https://github.com/leynos/ortho-config/tree/v0.11.0>
 [^7]: `git2::Repository` documentation, which exposes repository apply,
   apply-to-tree, and worktree operations used by the Rust core. Accessed
   2026-04-15. <https://docs.rs/git2/latest/git2/struct.Repository.html>
