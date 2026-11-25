@@ -380,6 +380,17 @@ rejected by the estate's Whitaker provisioning rule. CI uses the
 `install-whitaker` action instead. The coverage step in `ci.yml` sets the same
 two variables for the same reason.
 
+Cognitive complexity is not gated by Clippy. Clippy's `cognitive_complexity`
+scores code after macro expansion, so it counts branching a macro generated,
+and neither `Cargo.toml` nor `clippy.toml` enables it. Whitaker's experimental
+`macro_aware_cognitive_complexity` gates it at `max_complexity = 9`,
+CodeScene's ceiling. `dylint.toml` opts in with
+`[whitaker] experimental = ["macro_aware_cognitive_complexity"]`. Fix a finding
+by extracting named helpers, never by raising the threshold. A Whitaker suite
+installed before the lint existed (v0.2.12 or earlier) does not register it and
+silently leaves the gate inactive, so rerun `whitaker-installer` to refresh the
+suite after updating a checkout.
+
 `tests/build_standard_contract.rs` (readers in
 `tests/build_standard/support.rs`) holds the configuration and the Makefile
 recipes to the flag rules. `tests/build_standard_backend.rs` holds the
