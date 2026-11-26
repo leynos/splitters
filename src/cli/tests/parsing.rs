@@ -33,7 +33,10 @@ fn map_parses_typed_fields(#[case] args: &[&str], #[case] expected: MapArgs) {
     let crate::cli::Commands::Map(actual) = invocation.cli.command else {
         panic!("expected the map command");
     };
-    assert_eq!(actual, expected);
+    assert_eq!(
+        actual, expected,
+        "map must store the parsed fields verbatim"
+    );
 }
 
 #[rstest]
@@ -61,7 +64,10 @@ fn validate_parses_typed_fields(#[case] args: &[&str], #[case] expected: Validat
     let crate::cli::Commands::Validate(actual) = invocation.cli.command else {
         panic!("expected the validate command");
     };
-    assert_eq!(actual, expected);
+    assert_eq!(
+        actual, expected,
+        "validate must store the parsed fields verbatim",
+    );
 }
 
 #[rstest]
@@ -90,7 +96,10 @@ fn extract_parses_typed_fields(#[case] args: &[&str], #[case] expected: ExtractA
     let crate::cli::Commands::Extract(actual) = invocation.cli.command else {
         panic!("expected the extract command");
     };
-    assert_eq!(actual, expected);
+    assert_eq!(
+        actual, expected,
+        "extract must store the parsed fields verbatim",
+    );
 }
 
 #[rstest]
@@ -103,7 +112,10 @@ fn publish_uses_the_documented_spellings(#[case] args: &[&str], #[case] expected
     let crate::cli::Commands::Extract(actual) = invocation.cli.command else {
         panic!("expected the extract command");
     };
-    assert_eq!(actual.publish, expected);
+    assert_eq!(
+        actual.publish, expected,
+        "publish must follow the documented spellings",
+    );
 }
 
 #[rstest]

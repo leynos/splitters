@@ -63,5 +63,8 @@ fn operand_may_start_with_a_dash_after_the_separator() {
     let crate::cli::Commands::Validate(actual) = invocation.cli.command else {
         panic!("expected the validate command");
     };
-    assert_eq!(actual.proposal, "-weird");
+    assert_eq!(
+        actual.proposal, "-weird",
+        "an operand after `--` must be stored verbatim",
+    );
 }

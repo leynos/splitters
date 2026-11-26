@@ -8,6 +8,9 @@
 //! by [`splitters::cli::dispatch::report`]. Interim outcomes and a failure to
 //! load the en-GB catalogue both map to exit status `2`, the design's
 //! operational-failure class; roadmap item 1.1.2 owns the final mapping.
+//!
+//! The command surface is declared in [`splitters::cli`], and the interim
+//! outcome model lives in [`splitters::cli::dispatch`].
 
 use std::{
     io::{self, Write},

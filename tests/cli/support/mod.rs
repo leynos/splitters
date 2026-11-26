@@ -122,7 +122,7 @@ pub fn splitters_cmd() -> Splitters {
 /// An empty directory tree that the binary must leave untouched.
 pub struct Sandbox {
     root: TempDir,
-    baseline: Vec<PathBuf>,
+    baseline: Vec<Entry>,
 }
 
 impl Sandbox {
@@ -191,7 +191,7 @@ fn assert_scan_sees_files(dir: &Dir) -> io::Result<()> {
     dir.write("scan-probe", b"probe")?;
     let saw_probe = snapshot(dir)?
         .iter()
-        .any(|path| path == Path::new("scan-probe"));
+        .any(|entry| entry.path == Path::new("scan-probe"));
     dir.remove_file("scan-probe")?;
     if saw_probe {
         return Ok(());
@@ -204,8 +204,47 @@ fn assert_scan_sees_files(dir: &Dir) -> io::Result<()> {
 /// Opens the sandbox root as a capability directory.
 fn open(path: &Path) -> io::Result<Dir> { Dir::open_ambient_dir(path, ambient_authority()) }
 
-/// Returns every path under `dir`, relative to it, in sorted order.
-fn snapshot(dir: &Dir) -> io::Result<Vec<PathBuf>> {
+/// One sandbox entry's path and kind, so a type change is visible.
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+struct Entry {
+    /// The entry's path, relative to the sandbox root.
+    path: PathBuf,
+    /// Whether the entry is a directory, file, or something else.
+    kind: EntryKind,
+}
+
+/// The filesystem kind recorded for a sandbox entry.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum EntryKind {
+    /// A directory.
+    Directory,
+    /// A regular file.
+    File,
+    /// A symbolic link.
+    Symlink,
+    /// Any other entry kind, such as a socket or device.
+    Other,
+}
+
+impl EntryKind {
+    /// Classifies one directory entry.
+    fn of(entry: &cap_std::fs::DirEntry) -> io::Result<Self> {
+        let file_type = entry.file_type()?;
+        if file_type.is_dir() {
+            return Ok(Self::Directory);
+        }
+        if file_type.is_file() {
+            return Ok(Self::File);
+        }
+        if file_type.is_symlink() {
+            return Ok(Self::Symlink);
+        }
+        Ok(Self::Other)
+    }
+}
+
+/// Returns every entry under `dir`, relative to it, in sorted order.
+fn snapshot(dir: &Dir) -> io::Result<Vec<Entry>> {
     let mut entries = Vec::new();
     collect(dir, Path::new(""), &mut entries)?;
     entries.sort();
@@ -213,15 +252,49 @@ fn snapshot(dir: &Dir) -> io::Result<Vec<PathBuf>> {
 }
 
 /// Appends `dir`'s entries, recursing into directories, to `entries`.
-fn collect(dir: &Dir, prefix: &Path, entries: &mut Vec<PathBuf>) -> io::Result<()> {
+fn collect(dir: &Dir, prefix: &Path, entries: &mut Vec<Entry>) -> io::Result<()> {
     for entry in dir.entries()? {
         let item = entry?;
         let name = item.file_name();
         let path = prefix.join(&name);
-        entries.push(path.clone());
-        if item.file_type()?.is_dir() {
+        let kind = EntryKind::of(&item)?;
+        entries.push(Entry {
+            path: path.clone(),
+            kind,
+        });
+        if kind == EntryKind::Directory {
             collect(&dir.open_dir(&name)?, &path, entries)?;
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    //! Regression tests for the sandbox comparison.
+
+    use super::Sandbox;
+
+    #[test]
+    fn a_kind_change_is_detected() {
+        let sandbox = Sandbox::new().expect("the sandbox should be created");
+        let dir = super::open(sandbox.root()).expect("the sandbox root should open");
+        dir.remove_dir("home")
+            .expect("the empty home directory should be removable");
+        dir.write("home", b"now a file")
+            .expect("a same-named file should be creatable");
+        let result = sandbox.assert_untouched("kind change");
+        assert!(
+            result.is_err(),
+            "replacing an empty directory with a file must fail the comparison",
+        );
+    }
+
+    #[test]
+    fn an_unchanged_sandbox_passes() {
+        let sandbox = Sandbox::new().expect("the sandbox should be created");
+        sandbox
+            .assert_untouched("unchanged")
+            .expect("an untouched sandbox must pass");
+    }
 }

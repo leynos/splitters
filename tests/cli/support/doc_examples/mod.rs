@@ -159,7 +159,7 @@ struct Fence {
 /// string may not contain a backtick, so a line such as ```` ```foo`bar ````
 /// is content rather than a delimiter.
 fn opening_fence(line: &str) -> Option<Fence> {
-    let trimmed = line.trim_start();
+    let trimmed = unindented(line)?;
     let marker = trimmed.chars().next()?;
     if marker != '`' && marker != '~' {
         return None;
@@ -175,12 +175,27 @@ fn opening_fence(line: &str) -> Option<Fence> {
     Some(Fence { marker, length })
 }
 
+/// Returns the line after at most three leading spaces.
+///
+/// CommonMark allows up to three spaces before a fence; four or more make an
+/// indented code block instead, so such a line can neither open nor close a
+/// fenced block.
+fn unindented(line: &str) -> Option<&str> {
+    let spaces = line.chars().take_while(|ch| *ch == ' ').count();
+    if spaces > 3 {
+        return None;
+    }
+    line.get(spaces..)
+}
+
 /// Returns whether `line` closes the block opened by `opening`.
 ///
 /// A closing fence uses the same character, is at least as long as the
 /// opening fence, and has only whitespace after its delimiter.
 fn closing_fence(line: &str, opening: Fence) -> bool {
-    let trimmed = line.trim_start();
+    let Some(trimmed) = unindented(line) else {
+        return false;
+    };
     let marker_count = trimmed
         .chars()
         .take_while(|ch| *ch == opening.marker)
@@ -227,152 +242,5 @@ fn fence_body(
 }
 
 #[cfg(test)]
-mod tests {
-    //! Structural tests for the loader's marker and fence rules.
-
-    use pretty_assertions::assert_eq;
-    use rstest::rstest;
-
-    use super::{DocExample, ExampleError, load};
-
-    #[test]
-    fn loads_a_marked_tilde_fence() {
-        let document = concat!(
-            "<!-- tested-example: tilde -->\n",
-            "~~~console\n",
-            "$ splitters --help\n",
-            "Usage: splitters\n",
-            "~~~\n",
-        );
-        let examples = load(document).expect("the tilde example should load");
-        let example = examples
-            .first()
-            .expect("a tilde fence should load one example");
-        assert_eq!(example.id, "tilde", "the marker names the tilde example");
-    }
-
-    #[test]
-    fn an_unmarked_tilde_fence_is_rejected() {
-        let document = "~~~console\n$ splitters --help\n~~~\n";
-        assert_eq!(
-            load(document),
-            Err(ExampleError::UnmarkedFence { line: 0 }),
-            "a tilde fence must carry a marker too",
-        );
-    }
-
-    #[test]
-    fn a_shorter_closing_fence_does_not_close_a_longer_fence() {
-        let document = concat!(
-            "<!-- tested-example: long -->\n",
-            "````console\n",
-            "```rust\n",
-            "```\n",
-        );
-        assert_eq!(
-            load(document),
-            Err(ExampleError::UnterminatedFence { line: 1 }),
-            "only a fence at least as long as the opener may close it",
-        );
-    }
-
-    #[test]
-    fn a_backtick_info_string_with_a_backtick_is_content() {
-        let document = concat!(
-            "<!-- tested-example: info -->\n",
-            "```console\n",
-            "```rust`not-a-fence\n",
-            "```\n",
-        );
-        let examples = load(document).expect("the backtick block should load");
-        let example = examples.first().expect("one backtick example should load");
-        assert_eq!(
-            example.body, "```rust`not-a-fence\n",
-            "a backtick info string may not contain a backtick, so the line is content",
-        );
-    }
-
-    #[test]
-    fn loads_one_marked_example() {
-        let document = concat!(
-            "# Guide\n\n",
-            "<!-- tested-example: demo -->\n",
-            "```console\n",
-            "$ splitters --help\n",
-            "Usage: splitters\n",
-            "```\n",
-        );
-        let examples = load(document).expect("the document should load");
-        assert_eq!(
-            examples,
-            vec![DocExample {
-                id: "demo".to_owned(),
-                body: "$ splitters --help\nUsage: splitters\n".to_owned(),
-            }],
-        );
-    }
-
-    #[test]
-    fn an_unmarked_fence_is_rejected() {
-        let document = "```console\n$ splitters --help\n```\n";
-        assert_eq!(
-            load(document),
-            Err(ExampleError::UnmarkedFence { line: 0 }),
-            "every fence must carry a marker",
-        );
-    }
-
-    #[test]
-    fn an_unterminated_fence_is_rejected() {
-        let document = "<!-- tested-example: demo -->\n```console\n$ splitters --help\n";
-        assert_eq!(
-            load(document),
-            Err(ExampleError::UnterminatedFence { line: 1 }),
-            "a fence without a closer must fail",
-        );
-    }
-
-    #[test]
-    fn a_marker_without_an_identifier_is_rejected() {
-        let document = "<!-- tested-example:  -->\n```console\n$ splitters --help\n```\n";
-        assert_eq!(
-            load(document),
-            Err(ExampleError::MissingIdentifier { line: 0 }),
-            "a marker must name its example",
-        );
-    }
-
-    #[test]
-    fn a_duplicate_identifier_is_rejected() {
-        let document = concat!(
-            "<!-- tested-example: demo -->\n```console\n$ splitters --help\n```\n",
-            "<!-- tested-example: demo -->\n```console\n$ splitters --version\n```\n",
-        );
-        assert_eq!(
-            load(document),
-            Err(ExampleError::DuplicateIdentifier {
-                identifier: "demo".to_owned(),
-                line: 4,
-            }),
-            "identifiers must be unique within a document",
-        );
-    }
-
-    #[rstest]
-    #[case::command("$ splitters --help\nUsage: splitters\n", Ok(("splitters --help", "Usage: splitters\n")))]
-    #[case::missing("Usage: splitters\n", Err(ExampleError::MissingCommand { identifier: "demo".to_owned() }))]
-    fn splits_the_command_from_the_expected_output(
-        #[case] body: &str,
-        #[case] expected: Result<(&str, &str), ExampleError>,
-    ) {
-        let example = DocExample {
-            id: "demo".to_owned(),
-            body: body.to_owned(),
-        };
-        assert_eq!(
-            example.command_and_output(),
-            expected,
-            "the command line and expected output must split at the first newline",
-        );
-    }
-}
+#[path = "tests.rs"]
+mod tests;
