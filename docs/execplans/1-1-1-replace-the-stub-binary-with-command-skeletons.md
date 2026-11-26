@@ -5,7 +5,8 @@ This ExecPlan (execution plan) is a living document. The sections `Constraints`,
 `Outcomes & retrospective`, `Conformance basis`, and `Verification plan` must
 be kept up to date as work proceeds.
 
-Status: APPROVED (user approved on 2026-11-25; implementation in progress)
+Status: COMPLETE (implemented 2026-11-26; PR delivery continues in
+pr-babysitting)
 
 Branch: `1-1-1-replace-the-stub-binary-with-command-skeletons`
 
@@ -247,7 +248,9 @@ revision is recorded in `Revision note`.
 - [x] (2026-11-26) `EP-M3` the `splitters` binary uses the new surface end to
   end; the focused `cli` suite reports 32 passed, 0 skipped, after the red run
   against the stub reported 9 passed and 11 failed.
-- [ ] `EP-M4` documentation, tested guide examples, and roadmap closure.
+- [x] (2026-11-26) `EP-M4` documentation, tested guide examples, and roadmap
+  closure; the `cli` target reports 45 passed, 0 skipped, and markdownlint and
+  nixie pass.
 
 ## Surprises & discoveries
 
@@ -303,6 +306,11 @@ revision is recorded in `Revision note`.
   `clippy::too_many_arguments` at the outline binding. Impact: the feature uses
   six explicit scenarios named for the command and option; the coverage is
   unchanged.
+- Observation: the users' guide records clap's next-line option layout for the
+  root `--help`, where `-h, --help` and its description occupy separate lines.
+  Evidence: the guide's `splitters-help` example. Impact: the guide test
+  compares that layout exactly, so a clap layout change shows up as a reviewed
+  guide diff rather than a silent test change.
 - Observation: `rstest-bdd-macros` 0.6.0's `ScenarioState` derive does not
   generate `Default` (the vendored guide says it does). Evidence: compile error
   `SurfaceState: Default is not satisfied`. Impact: the state struct derives
@@ -480,6 +488,15 @@ revision is recorded in `Revision note`.
   suite passed (31 passed, 1 skipped), the surface snapshot was reviewed
   against design Tables 3–5 and D3–D5 before acceptance, and the two
   test-authoring defects found in the red run were fixed.
+- `EP-M4` (2026-11-26): `docs/users-guide.md` records the rendered help as
+  four tested examples, the option tables, the interim exit status, and the
+  configuration gap; ADR-0001 records the declaration and help-text
+  conventions; design Tables 3–5 gained a Flag column; the developer's guide,
+  repository layout, and documentation contents describe the new files; and
+  roadmap item 1.1.1 is ticked. The guide's tested-example loader rejects an
+  unmarked fence, an unterminated fence, a missing identifier, and a duplicate
+  identifier. The `cli` target passed 45 tests, markdownlint and nixie passed,
+  and all three commit gates passed.
 - `EP-M3` (2026-11-26): `cli::dispatch` names the selected command and reports
   the interim outcome, and `main` builds the en-GB localizer, parses
   `std::env::args_os()` once, lets clap exit display requests and usage errors,
@@ -1099,6 +1116,9 @@ EP-M3 red:   cargo nextest run --test cli
              -> against the stub: 9 passed, 11 failed ("Hello from Splitters!"
                 on stdout, exit status 0 where 2 was required)
 EP-M3 green: same command -> 32 passed, 0 skipped
+EP-M4 red:   cargo nextest run --test cli -E 'test(/guide/)'
+             -> E0583-style include_str failure: docs/users-guide.md missing
+EP-M4 green: cargo nextest run --test cli -> 45 passed, 0 skipped
 ```
 
 Planning probe (2026-11-20, scratch crate under `target/plan-probe/`, now

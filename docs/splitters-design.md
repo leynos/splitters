@@ -158,7 +158,9 @@ the command-line flag, the environment variable, the configuration-file key,
 and the default value, and Splitters resolves them in the precedence order
 given in §5.[^6] The option names in the following tables identify the primary
 operator surface; the environment and file spellings are generated from the
-same declaration rather than maintained separately.
+same declaration rather than maintained separately. The flag spellings, the
+declaration pattern, and the help-text policy are recorded in
+[ADR-0001](adrs/adr-0001-command-line-declaration-and-help-text-conventions.md).
 
 ### 7.1 `map`
 
@@ -167,13 +169,13 @@ decomposes it into fragments, and writes a manifest directory.
 
 Table 3: `map` contract.
 
-| Item            | Contract                                                                                          |
-| --------------- | ------------------------------------------------------------------------------------------------- |
-| Inputs          | Base ref, output directory                                                                        |
-| Preconditions   | Repository exists, `HEAD` resolves, working tree and index are clean                              |
-| Outputs on disk | `manifest.toml`, `fragments/*.patch`, `metadata/*.json`                                           |
-| Stdout          | One JSON summary object                                                                           |
-| Exit code       | `0` on success, `1` on rejected repository state or invalid arguments, `2` on operational failure |
+| Item            | Flag                                   | Contract                                                                                          |
+| --------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Inputs          | `--base <REF>`, `--manifest-dir <DIR>` | Base ref, output directory                                                                        |
+| Preconditions   |                                        | Repository exists, `HEAD` resolves, working tree and index are clean                              |
+| Outputs on disk |                                        | `manifest.toml`, `fragments/*.patch`, `metadata/*.json`                                           |
+| Stdout          |                                        | One JSON summary object                                                                           |
+| Exit code       |                                        | `0` on success, `1` on rejected repository state or invalid arguments, `2` on operational failure |
 
 `map` emits fragments for the following change kinds:
 
@@ -198,13 +200,13 @@ three questions:
 
 Table 4: `validate` contract.
 
-| Item          | Contract                                                                                |
-| ------------- | --------------------------------------------------------------------------------------- |
-| Inputs        | Manifest directory, proposal identifier, optional base override, optional check command |
-| Preconditions | Repository exists, working tree and index are clean, manifest schema is valid           |
-| Side effects  | None in the main worktree                                                               |
-| Stdout        | One JSON validation report                                                              |
-| Exit code     | `0` when the proposal is valid, `1` when validation fails, `2` on operational failure   |
+| Item          | Flag                                                                      | Contract                                                                              |
+| ------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Inputs        | `<PROPOSAL>`, `--manifest-dir <DIR>`, `--base <REF>`, `--check <COMMAND>` | Manifest directory, proposal, optional base, optional check                           |
+| Preconditions |                                                                           | Repository exists, working tree and index are clean, schema valid                     |
+| Side effects  |                                                                           | None in the main worktree                                                             |
+| Stdout        |                                                                           | One JSON validation report                                                            |
+| Exit code     |                                                                           | `0` when the proposal is valid, `1` when validation fails, `2` on operational failure |
 
 If `--check <cmd>` is supplied, Splitters runs that command once in the
 candidate worktree and once in the residual worktree. A non-zero exit status
@@ -228,14 +230,14 @@ change set from the current branch.
 
 Table 5: `extract` contract.
 
-| Item                        | Contract                                                                                                    |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Inputs                      | Manifest directory, proposal identifier, optional base override, optional branch name, optional `--publish` |
-| Preconditions               | Repository exists, working tree and index are clean, proposal revalidates immediately before mutation       |
-| Local side effects          | New branch and commit, current branch rewritten by subtraction                                              |
-| Optional remote side effect | `gh pr create` for the extracted branch                                                                     |
-| Stdout                      | One JSON extraction report                                                                                  |
-| Exit code                   | `0` on success, `1` on rejected validation, `2` on operational failure                                      |
+| Item                        | Flag                                                                                          | Contract                                                                                              |
+| --------------------------- | --------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| Inputs                      | `<PROPOSAL>`, `--manifest-dir <DIR>`, `--base <REF>`, `--branch <NAME>`, `--publish[=<BOOL>]` | Manifest directory, proposal, optional base, branch, and publish flag                                 |
+| Preconditions               |                                                                                               | Repository exists, working tree and index are clean, proposal revalidates immediately before mutation |
+| Local side effects          |                                                                                               | New branch and commit, current branch rewritten by subtraction                                        |
+| Optional remote side effect |                                                                                               | `gh pr create` for the extracted branch                                                               |
+| Stdout                      |                                                                                               | One JSON extraction report                                                                            |
+| Exit code                   |                                                                                               | `0` on success, `1` on rejected validation, `2` on operational failure                                |
 
 `extract` is locally atomic at the repository-state level:
 

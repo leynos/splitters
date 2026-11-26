@@ -6,6 +6,8 @@
 //! `GIT_CEILING_DIRECTORIES` set to its parent so Git discovery cannot escape
 //! into the checkout that owns the test.
 
+pub mod doc_examples;
+
 use std::{
     ffi::OsStr,
     io,

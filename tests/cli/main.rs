@@ -5,4 +5,5 @@
 
 mod bdd;
 mod end_to_end;
+mod guide_examples;
 mod support;

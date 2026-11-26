@@ -14,11 +14,16 @@ ignores.
   following the naming rules in the
   [documentation style guide](documentation-style-guide.md). When a task needs
   an execution plan, store it in `docs/execplans/`.
-- `src/` contains the Rust library and binary code.
+- `locales/` holds the `Fluent` message catalogues; `locales/en-GB/messages.ftl`
+  is the shipped help text.
+- `src/` contains the Rust library and binary code. The command surface is
+  under `src/cli/`, with its unit tests and `insta` snapshots under
+  `src/cli/tests/`.
 - `tests/` contains integration tests, build-standard tests, and workflow
-  contract checks. Build-standard test support is grouped under
-  `tests/build_standard/`; the workflow contract check is under
-  `tests/workflow_contracts/`.
+  contract checks. Executable-level tests and their shared support are under
+  `tests/cli/`; Gherkin feature files are under `tests/features/`;
+  build-standard test support is grouped under `tests/build_standard/`; the
+  workflow contract check is under `tests/workflow_contracts/`.
 
 ## Root files
 

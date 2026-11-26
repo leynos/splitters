@@ -55,3 +55,7 @@ Feature: Splitters command surface
     Then the exit status is 2
     And standard output is empty
 
+  Scenario: The documented help matches the binary
+    Given the users' guide example "splitters-help"
+    When the operator runs the documented command
+    Then standard output equals the documented output

@@ -1,25 +1,34 @@
 //! Behaviour-driven scenarios for the declared command surface.
 //!
 //! The scenarios link `REQ-help`, `REQ-parse-coverage`, and `REQ-streams` to
-//! the executable.
+//! the executable, and the final scenario links the tested users'-guide
+//! examples to the same behaviour.
 
 use rstest::fixture;
 use rstest_bdd::Slot;
-use rstest_bdd_macros::{ScenarioState, scenario, then, when};
+use rstest_bdd_macros::{ScenarioState, given, scenario, then, when};
 
-use crate::support::{Run, Splitters, splitters_cmd};
+use crate::support::{
+    Run,
+    Splitters,
+    doc_examples::{self, DocExample},
+    splitters_cmd,
+};
 
 /// The streams and status of the most recent command in this scenario.
 #[derive(Default, ScenarioState)]
 struct SurfaceState {
     /// Captured output of the last command.
     run: Slot<Run>,
+    /// The users'-guide example selected by the scenario.
+    example: Slot<DocExample>,
 }
 
 #[fixture]
 fn surface_state() -> SurfaceState {
     let run = Slot::new();
-    SurfaceState { run }
+    let example = Slot::new();
+    SurfaceState { run, example }
 }
 
 #[when("the operator runs {cmd:string}")]
@@ -112,6 +121,50 @@ fn the_options_section_lists(surface_state: &SurfaceState, option: String) {
     );
 }
 
+#[given("the users' guide example {identifier:string}")]
+fn the_users_guide_example(surface_state: &SurfaceState, identifier: String) {
+    let guide = include_str!("../../docs/users-guide.md");
+    let Ok(examples) = doc_examples::load(guide) else {
+        panic!("the users' guide must load");
+    };
+    let Some(example) = examples
+        .into_iter()
+        .find(|example| example.id == identifier)
+    else {
+        panic!("the users' guide must declare {identifier}");
+    };
+    surface_state.example.set(example);
+}
+
+#[when("the operator runs the documented command")]
+fn the_operator_runs_the_documented_command(
+    surface_state: &SurfaceState,
+    splitters_cmd: &Splitters,
+) {
+    let Some(example) = surface_state.example.get() else {
+        panic!("no users'-guide example has been selected");
+    };
+    let argv = documented_argv(&example);
+    surface_state
+        .run
+        .set(splitters_cmd.run(argv.iter().skip(1)));
+}
+
+#[then("standard output equals the documented output")]
+fn standard_output_equals_the_documented_output(surface_state: &SurfaceState) {
+    let run = last_run(surface_state);
+    let Some(example) = surface_state.example.get() else {
+        panic!("no users'-guide example has been selected");
+    };
+    let Ok((_, expected)) = example.command_and_output() else {
+        panic!("the documented example must parse");
+    };
+    assert_eq!(
+        run.stdout, expected,
+        "the documented output must match the binary",
+    );
+}
+
 #[scenario(
     path = "tests/features/command_surface.feature",
     name = "The top-level help lists every command"
@@ -192,12 +245,38 @@ fn boolean_flag_rejects_a_detached_value(surface_state: SurfaceState, splitters_
     let _ = (surface_state, splitters_cmd);
 }
 
+#[scenario(
+    path = "tests/features/command_surface.feature",
+    name = "The documented help matches the binary"
+)]
+fn documented_help_matches(surface_state: SurfaceState, splitters_cmd: Splitters) {
+    let _ = (surface_state, splitters_cmd);
+}
+
 /// Returns the last captured run, failing the step when none is recorded.
 fn last_run(surface_state: &SurfaceState) -> Run {
     let Some(run) = surface_state.run.get() else {
         panic!("no command has been run in this scenario");
     };
     run
+}
+
+/// Splits a documented command into its argument vector.
+fn documented_argv(example: &DocExample) -> Vec<String> {
+    let Ok((command, _)) = example.command_and_output() else {
+        panic!("the documented example must parse");
+    };
+    let Some(argv) = shlex::split(command) else {
+        panic!("the documented command must be shell syntax: {command}");
+    };
+    let Some(program) = argv.first() else {
+        panic!("the documented command must name a program: {command}");
+    };
+    assert_eq!(
+        program, "splitters",
+        "documented commands must invoke the splitters binary",
+    );
+    argv
 }
 
 /// Returns whether `heading`'s section has a row that begins with `item`.
