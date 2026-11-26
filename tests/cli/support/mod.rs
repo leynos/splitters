@@ -36,6 +36,38 @@ pub struct Run {
     pub status: Option<i32>,
 }
 
+/// Copies the allowlisted environment into a child command.
+fn apply_environment_allowlist(command: &mut Command) {
+    for variable in PASS_THROUGH_ENV {
+        copy_exact_variable(command, variable);
+    }
+    for (key, value) in std::env::vars_os() {
+        copy_prefixed_variable(command, &key, &value);
+    }
+}
+
+/// Copies one exact allowlisted variable when the runner defines it.
+fn copy_exact_variable(command: &mut Command, variable: &str) {
+    if let Some(value) = std::env::var_os(variable) {
+        command.env(variable, value);
+    }
+}
+
+/// Copies one variable whose name matches an allowlisted prefix.
+fn copy_prefixed_variable(command: &mut Command, key: &OsStr, value: &OsStr) {
+    let name = key.to_string_lossy();
+    if name_matches_allowlist(&name) {
+        command.env(name.as_ref(), value);
+    }
+}
+
+/// Returns whether a variable name is preserved for coverage tooling.
+fn name_matches_allowlist(name: &str) -> bool {
+    PASS_THROUGH_PREFIXES
+        .iter()
+        .any(|prefix| name.starts_with(prefix))
+}
+
 /// The `splitters` binary invoked inside a sandbox.
 pub struct Splitters {
     sandbox: Sandbox,
@@ -53,20 +85,7 @@ impl Splitters {
             .env("HOME", self.sandbox.home())
             .env("XDG_CONFIG_HOME", self.sandbox.xdg_config_home())
             .env("GIT_CEILING_DIRECTORIES", self.sandbox.ceiling());
-        for variable in PASS_THROUGH_ENV {
-            if let Some(value) = std::env::var_os(variable) {
-                command.env(variable, value);
-            }
-        }
-        for (key, value) in std::env::vars_os() {
-            let name = key.to_string_lossy();
-            if PASS_THROUGH_PREFIXES
-                .iter()
-                .any(|prefix| name.starts_with(prefix))
-            {
-                command.env(name.as_ref(), value);
-            }
-        }
+        apply_environment_allowlist(&mut command);
         command
     }
 

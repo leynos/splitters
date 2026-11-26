@@ -16,6 +16,23 @@ use crate::cli::{
     localized_command,
 };
 
+/// One command of the declared surface, used to select its declarations.
+#[derive(Debug, Clone, Copy)]
+struct CommandUnderTest(&'static str);
+
+impl CommandUnderTest {
+    /// Returns the command's clap name.
+    #[must_use]
+    const fn as_str(self) -> &'static str { self.0 }
+}
+
+/// The `map` command under test.
+const MAP: CommandUnderTest = CommandUnderTest("map");
+/// The `validate` command under test.
+const VALIDATE: CommandUnderTest = CommandUnderTest("validate");
+/// The `extract` command under test.
+const EXTRACT: CommandUnderTest = CommandUnderTest("extract");
+
 /// Renders the localized command tree as deterministic, reviewed plain text.
 fn describe_surface(localizer: &dyn Localizer) -> String {
     let mut command = localized_command(localizer);
@@ -97,24 +114,28 @@ fn command_tree_declares_the_three_commands_and_help() {
 }
 
 #[rstest]
-#[case::map("map")]
-#[case::validate("validate")]
-#[case::extract("extract")]
-fn argument_struct_names_its_command(#[case] name: &str) {
+#[case::map(MAP)]
+#[case::validate(VALIDATE)]
+#[case::extract(EXTRACT)]
+fn argument_struct_names_its_command(#[case] command: CommandUnderTest) {
     assert_eq!(
-        args_command(name).get_name(),
-        name,
+        args_command(command).get_name(),
+        command.as_str(),
         "each argument struct must name its own command for OrthoConfig namespacing",
     );
 }
 
 #[rstest]
-#[case::map("map", &["base", "manifest_dir"])]
-#[case::validate("validate", &["proposal", "manifest_dir", "base", "check"])]
-#[case::extract("extract", &["proposal", "manifest_dir", "base", "branch", "publish"])]
-fn clap_arguments_match_ortho_config_ids(#[case] name: &str, #[case] expected: &[&str]) {
-    let clap_ids = clap_argument_ids(name);
-    let ortho_ids = ortho_argument_ids(name);
+#[case::map(MAP, &["base", "manifest_dir"])]
+#[case::validate(VALIDATE, &["proposal", "manifest_dir", "base", "check"])]
+#[case::extract(EXTRACT, &["proposal", "manifest_dir", "base", "branch", "publish"])]
+fn clap_arguments_match_ortho_config_ids(
+    #[case] command: CommandUnderTest,
+    #[case] expected: &[&str],
+) {
+    let name = command.as_str();
+    let clap_ids = clap_argument_ids(command);
+    let ortho_ids = ortho_argument_ids(command);
     assert!(
         !clap_ids.is_empty(),
         "clap must declare arguments for {name}"
@@ -144,8 +165,8 @@ fn root_declares_only_help_and_version() {
 }
 
 /// Returns the argument struct's own command, without the subcommand wrapper.
-fn args_command(name: &str) -> Command {
-    match name {
+fn args_command(command: CommandUnderTest) -> Command {
+    match command.0 {
         "map" => MapArgs::command(),
         "validate" => ValidateArgs::command(),
         "extract" => ExtractArgs::command(),
@@ -154,10 +175,11 @@ fn args_command(name: &str) -> Command {
 }
 
 /// Returns the argument identifiers `clap` sees for one subcommand.
-fn clap_argument_ids(name: &str) -> BTreeSet<String> {
-    let mut command = localized_command(&NoOpLocalizer::new());
-    command.build();
-    let Some(subcommand) = command.find_subcommand(name) else {
+fn clap_argument_ids(command: CommandUnderTest) -> BTreeSet<String> {
+    let name = command.as_str();
+    let mut tree = localized_command(&NoOpLocalizer::new());
+    tree.build();
+    let Some(subcommand) = tree.find_subcommand(name) else {
         panic!("missing subcommand {name}");
     };
     subcommand
@@ -168,8 +190,8 @@ fn clap_argument_ids(name: &str) -> BTreeSet<String> {
 }
 
 /// Returns the argument identifiers `OrthoConfig` generated for one subcommand.
-fn ortho_argument_ids(name: &str) -> BTreeSet<String> {
-    let ids = match name {
+fn ortho_argument_ids(command: CommandUnderTest) -> BTreeSet<String> {
+    let ids = match command.0 {
         "map" => MapArgs::ARG_IDS,
         "validate" => ValidateArgs::ARG_IDS,
         "extract" => ExtractArgs::ARG_IDS,
