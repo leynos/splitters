@@ -4,6 +4,7 @@
 //! tree, `parsing` pins the accepted and rejected spellings, and `values`
 //! pins the values that reach the argument structs.
 
+mod catalogue;
 mod declaration;
 mod parsing;
 mod values;

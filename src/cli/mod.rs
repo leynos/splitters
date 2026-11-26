@@ -8,6 +8,7 @@
 //! owns them.
 
 pub mod args;
+pub mod localization;
 
 #[cfg(test)]
 mod tests;

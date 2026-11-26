@@ -76,7 +76,9 @@ fn text(value: Option<&clap::builder::StyledStr>) -> String {
 
 #[test]
 fn command_surface_is_pinned() {
-    insta::assert_snapshot!("surface", describe_surface(&NoOpLocalizer::new()));
+    let localizer =
+        crate::cli::localization::help_localizer().expect("the en-GB catalogue must build");
+    insta::assert_snapshot!("surface", describe_surface(&localizer));
 }
 
 #[test]

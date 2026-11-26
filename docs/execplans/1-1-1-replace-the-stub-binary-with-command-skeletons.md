@@ -241,7 +241,9 @@ revision is recorded in `Revision note`.
 - [x] (2026-11-26) `EP-M1` typed command declarations parse in-process; the
   focused suite reports 31 passed, 1 skipped, and the surface snapshot is
   reviewed and accepted.
-- [ ] `EP-M2` help text is localized through the en-GB catalogue.
+- [x] (2026-11-26) `EP-M2` help text is localized through the en-GB catalogue;
+  the focused suite reports 40 passed, 1 skipped, and the re-reviewed surface
+  snapshot carries the catalogue text.
 - [ ] `EP-M3` the `splitters` binary uses the new surface end to end.
 - [ ] `EP-M4` documentation, tested guide examples, and roadmap closure.
 
@@ -281,6 +283,10 @@ revision is recorded in `Revision note`.
   `Arguments:` section. Impact: the BDD step that checks an entry selects the
   section from the entry's spelling, so the planned `<PROPOSAL>` row is checked
   where clap prints it.
+- Observation: once the root has a `long_about`, clap renders the root's help
+  flag as `Print help (see more with '--help')`, because `-h` and `--help` now
+  differ. Evidence: the EP-M2 surface snapshot. Impact: none for the contract;
+  the users' guide records the rendered text the binary actually produces.
 - Observation: the red `EP-M1` run failed with 13 compile errors
   (`E0432`/`E0433`/`E0425` unresolved command-surface items, plus `E0599` and
   `E0382` in the new tests). Impact: the two test-authoring defects were fixed
@@ -452,8 +458,15 @@ revision is recorded in `Revision note`.
   localize the tree at a fixed width and preserve `ArgMatches`. The focused
   suite passed (31 passed, 1 skipped), the surface snapshot was reviewed
   against design Tables 3–5 and D3–D5 before acceptance, and the two
-  test-authoring defects found in the red run were fixed. `EP-M2`–`EP-M4`
-  remain.
+  test-authoring defects found in the red run were fixed.
+- `EP-M2` (2026-11-26): `locales/en-GB/messages.ftl` owns all help text and
+  `cli::localization::help_localizer` builds the en-GB localizer with no
+  fallback. The catalogue tests prove the base, about, and help identifiers
+  agree with the derive, that the catalogue declares exactly the generated set
+  and nothing stale, and that rendered help contains the catalogue text and no
+  documentation text. The focused suite passed (40 passed, 1 skipped), and the
+  snapshot was re-reviewed with the catalogue text before acceptance.
+  `EP-M3`–`EP-M4` remain.
 
 ## Context and orientation
 
@@ -1050,6 +1063,9 @@ red:   cargo nextest run --lib -E 'test(/cli::/)'
 green: same command -> 31 passed, 1 skipped
        surface snapshot: src/cli/tests/snapshots/
          splitters__cli__tests__declaration__surface.snap
+EP-M2 red:   cargo nextest run --lib -E 'test(/catalogue/)'
+             -> E0432 unresolved import crate::cli::localization
+EP-M2 green: same command -> 40 passed, 1 skipped; snapshot re-accepted
 ```
 
 Planning probe (2026-11-20, scratch crate under `target/plan-probe/`, now
