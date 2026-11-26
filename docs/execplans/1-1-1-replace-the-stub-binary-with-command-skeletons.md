@@ -524,8 +524,10 @@ revision is recorded in `Revision note`.
   four assertions lacked diagnostics, and that `src/main.rs` needed direct
   module links. Fixed: snapshots now record each entry's kind with a
   directory-to-file regression test; fences allow at most three leading spaces
-  with opening and closing regression tests; every assertion in this change
-  carries a message; and the binary links `splitters::cli` and
+  with opening and closing regression tests, a closer may be followed only by
+  spaces or tabs, and a mismatch is returned before the scan probe writes
+  anything (with a probe-collision regression test); every assertion in this
+  change carries a message; and the binary links `splitters::cli` and
   `splitters::cli::dispatch`. The code budget moved to 2,400 for the 2,363
   measured lines.
 - Post-implementation review (2026-11-26): CodeRabbit's formal review of

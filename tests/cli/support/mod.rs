@@ -169,15 +169,14 @@ impl Sandbox {
     pub fn assert_untouched(&self, context: &str) -> io::Result<()> {
         let dir = open(self.root.path())?;
         let after_child = snapshot(&dir)?;
-        assert_scan_sees_files(&dir)?;
-        if after_child == self.baseline {
-            return Ok(());
+        if after_child != self.baseline {
+            return Err(io::Error::other(format!(
+                "the binary must not touch its sandbox ({context}); found {after_child:?}, \
+                 expected {:?}",
+                self.baseline,
+            )));
         }
-        Err(io::Error::other(format!(
-            "the binary must not touch its sandbox ({context}); found {after_child:?}, expected \
-             {:?}",
-            self.baseline,
-        )))
+        assert_scan_sees_files(&dir)
     }
 }
 
@@ -287,6 +286,26 @@ mod tests {
         assert!(
             result.is_err(),
             "replacing an empty directory with a file must fail the comparison",
+        );
+    }
+
+    #[test]
+    fn a_child_created_probe_is_detected_and_preserved() {
+        let sandbox = Sandbox::new().expect("the sandbox should be created");
+        let dir = super::open(sandbox.root()).expect("the sandbox root should open");
+        dir.write("scan-probe", b"child contents")
+            .expect("the collision file should be creatable");
+        let result = sandbox.assert_untouched("probe collision");
+        assert!(
+            result.is_err(),
+            "a child-created scan-probe must fail the comparison",
+        );
+        let contents = dir
+            .read("scan-probe")
+            .expect("the collision file should still exist");
+        assert_eq!(
+            contents, b"child contents",
+            "the failed comparison must not overwrite the child's file",
         );
     }
 

@@ -47,6 +47,52 @@ fn a_shorter_closing_fence_does_not_close_a_longer_fence() {
 }
 
 #[test]
+fn a_four_space_indented_delimiter_with_no_closer_is_unterminated() {
+    let document = concat!(
+        "<!-- tested-example: indented-close -->\n",
+        "```console\n",
+        "$ splitters --help\n",
+        "    ```\n",
+    );
+    assert_eq!(
+        load(document),
+        Err(ExampleError::UnterminatedFence { line: 1 }),
+        "a four-space-indented delimiter must not close the block",
+    );
+}
+
+#[test]
+fn a_delimiter_followed_by_unicode_whitespace_does_not_close() {
+    let document = concat!(
+        "<!-- tested-example: unicode-space -->\n",
+        "```console\n",
+        "$ splitters --help\n",
+        "```\u{00A0}\n",
+    );
+    assert_eq!(
+        load(document),
+        Err(ExampleError::UnterminatedFence { line: 1 }),
+        "only spaces or tabs may follow a closing fence",
+    );
+}
+
+#[test]
+fn a_closer_may_have_three_spaces_and_trailing_blanks() {
+    let document = concat!(
+        "<!-- tested-example: padded-close -->\n",
+        "```console\n",
+        "$ splitters --help\n",
+        "   ```  \t\n",
+    );
+    let examples = load(document).expect("the padded closer should close the block");
+    let example = examples.first().expect("one example should load");
+    assert_eq!(
+        example.body, "$ splitters --help\n",
+        "up to three leading spaces and trailing blanks are allowed on a closer",
+    );
+}
+
+#[test]
 fn a_backtick_info_string_with_a_backtick_is_content() {
     let document = concat!(
         "<!-- tested-example: info -->\n",

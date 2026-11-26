@@ -191,7 +191,8 @@ fn unindented(line: &str) -> Option<&str> {
 /// Returns whether `line` closes the block opened by `opening`.
 ///
 /// A closing fence uses the same character, is at least as long as the
-/// opening fence, and has only whitespace after its delimiter.
+/// opening fence, and has only spaces or tabs after its delimiter; other
+/// Unicode whitespace does not close a block.
 fn closing_fence(line: &str, opening: Fence) -> bool {
     let Some(trimmed) = unindented(line) else {
         return false;
@@ -204,7 +205,7 @@ fn closing_fence(line: &str, opening: Fence) -> bool {
         return false;
     }
     let rest = trimmed.get(marker_count..).unwrap_or_default();
-    rest.trim().is_empty()
+    rest.chars().all(|ch| ch == ' ' || ch == '\t')
 }
 
 /// Parses one marker line.
