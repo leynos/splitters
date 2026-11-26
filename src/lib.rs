@@ -1,5 +1,7 @@
 //! Library entry points for the `splitters` package.
 
+pub mod cli;
+
 /// Return the current stub greeting used by the binary entry point.
 #[must_use]
 pub const fn greeting() -> &'static str { "Hello from Splitters!" }

@@ -5,7 +5,7 @@ This ExecPlan (execution plan) is a living document. The sections `Constraints`,
 `Outcomes & retrospective`, `Conformance basis`, and `Verification plan` must
 be kept up to date as work proceeds.
 
-Status: DRAFT (expert design review applied; awaiting user approval)
+Status: APPROVED (user approved on 2026-11-25; implementation in progress)
 
 Branch: `1-1-1-replace-the-stub-binary-with-command-skeletons`
 
@@ -237,8 +237,10 @@ revision is recorded in `Revision note`.
 - [x] (2026-11-20 13:40Z) Expert design review (structure and contracts;
   failure modes and test cost; alternatives and viability) applied; second
   probe of documentation metadata completed.
-- [ ] Plan approved by the user.
-- [ ] `EP-M1` typed command declarations parse in-process.
+- [x] (2026-11-25) Plan approved by the user; implementation started.
+- [x] (2026-11-26) `EP-M1` typed command declarations parse in-process; the
+  focused suite reports 31 passed, 1 skipped, and the surface snapshot is
+  reviewed and accepted.
 - [ ] `EP-M2` help text is localized through the en-GB catalogue.
 - [ ] `EP-M3` the `splitters` binary uses the new surface end to end.
 - [ ] `EP-M4` documentation, tested guide examples, and roadmap closure.
@@ -268,6 +270,21 @@ revision is recorded in `Revision note`.
   lines 122–129 (reported by the structure review). Impact: each struct must
   carry an explicit `#[command(name = "...")]`, and a test pins it (D1,
   `INV-surface`).
+- Observation: `googletest`'s `unordered_elements_are!` requires a statically
+  known matcher list, while the expected identifier sets are table data.
+  Evidence: the macro expands `$($matcher:expr),*` into a fixed-arity tuple.
+  Impact: `INV-single-declaration` compares the two runtime `BTreeSet` values
+  with `container_eq`, which is order-independent and names missing and
+  unexpected elements. The obligation and its non-vacuity checks are unchanged.
+- Observation: clap renders positionals under `Arguments:` and options under
+  `Options:`. Evidence: `splitters validate --help` places `<PROPOSAL>` in an
+  `Arguments:` section. Impact: the BDD step that checks an entry selects the
+  section from the entry's spelling, so the planned `<PROPOSAL>` row is checked
+  where clap prints it.
+- Observation: the red `EP-M1` run failed with 13 compile errors
+  (`E0432`/`E0433`/`E0425` unresolved command-surface items, plus `E0599` and
+  `E0382` in the new tests). Impact: the two test-authoring defects were fixed
+  before the green run; the rest were the intended missing declarations.
 - Observation: OrthoConfig's documentation metadata (`OrthoConfigDocs` and
   `OrthoConfigSubcommandDocs`) describes subcommand fields from the OrthoConfig
   attributes rather than the clap declaration. For `ValidateArgs` it reports
@@ -429,7 +446,14 @@ revision is recorded in `Revision note`.
 
 ## Outcomes & retrospective
 
-Not started. Populate at each milestone boundary and at completion.
+- `EP-M1` (2026-11-26): `cli::args` declares `MapArgs`, `ValidateArgs`, and
+  `ExtractArgs` with the field model, explicit command names, and per-command
+  localization bases; `cli::localized_command` and `cli::try_parse_from`
+  localize the tree at a fixed width and preserve `ArgMatches`. The focused
+  suite passed (31 passed, 1 skipped), the surface snapshot was reviewed
+  against design Tables 3–5 and D3–D5 before acceptance, and the two
+  test-authoring defects found in the red run were fixed. `EP-M2`–`EP-M4`
+  remain.
 
 ## Context and orientation
 
@@ -1016,6 +1040,17 @@ reviewing the diff. The planning probe under `target/plan-probe/` (ignored by
 Git) is deleted before the plan is submitted.
 
 ## Artefacts and notes
+
+`EP-M1` evidence (logs under `/tmp`, named by branch):
+
+```plaintext
+red:   cargo nextest run --lib -E 'test(/cli::/)'
+       -> 13 errors: unresolved args/Invocation/localized_command/Commands/
+          try_parse_from, plus E0599 and E0382 in the new tests
+green: same command -> 31 passed, 1 skipped
+       surface snapshot: src/cli/tests/snapshots/
+         splitters__cli__tests__declaration__surface.snap
+```
 
 Planning probe (2026-11-20, scratch crate under `target/plan-probe/`, now
 deleted) declared the three structs with `clap` 4.6.9, `ortho_config` 0.11.0,

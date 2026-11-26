@@ -1,0 +1,28 @@
+---
+source: src/cli/tests/declaration.rs
+expression: "describe_surface(&NoOpLocalizer::new())"
+---
+command splitters
+  about: The root command line: one subcommand plus clap's own display flags
+  arg help: long=help value_names= index=<none> required=false num_args=0..=0 require_equals=false help=Print help
+  arg version: long=version value_names= index=<none> required=false num_args=0..=0 require_equals=false help=Print version
+  command map
+    about: Carries the `map` arguments into the library
+    arg base: long=base value_names=REF index=<none> required=false num_args=1..=1 require_equals=false help=Base ref override; `None` defers to lower configuration layers
+    arg help: long=help value_names= index=<none> required=false num_args=0..=0 require_equals=false help=Print help
+    arg manifest_dir: long=manifest-dir value_names=DIR index=<none> required=false num_args=1..=1 require_equals=false help=Manifest directory override; `None` defers to lower configuration layers
+  command validate
+    about: Carries the `validate` arguments into the library
+    arg base: long=base value_names=REF index=<none> required=false num_args=1..=1 require_equals=false help=Base ref override; `None` defers to lower configuration layers
+    arg check: long=check value_names=COMMAND index=<none> required=false num_args=1..=1 require_equals=false help=Operator check command; `None` skips the check in both proof worktrees
+    arg help: long=help value_names= index=<none> required=false num_args=0..=0 require_equals=false help=Print help
+    arg manifest_dir: long=manifest-dir value_names=DIR index=<none> required=false num_args=1..=1 require_equals=false help=Manifest directory override; `None` defers to lower configuration layers
+    arg proposal: long=<none> value_names=PROPOSAL index=1 required=true num_args=1..=1 require_equals=false help=Identifier of the proposal to validate
+  command extract
+    about: Carries the `extract` arguments into the library
+    arg base: long=base value_names=REF index=<none> required=false num_args=1..=1 require_equals=false help=Base ref override; `None` defers to lower configuration layers
+    arg branch: long=branch value_names=NAME index=<none> required=false num_args=1..=1 require_equals=false help=Branch name override; `None` derives the name from the proposal
+    arg help: long=help value_names= index=<none> required=false num_args=0..=0 require_equals=false help=Print help
+    arg manifest_dir: long=manifest-dir value_names=DIR index=<none> required=false num_args=1..=1 require_equals=false help=Manifest directory override; `None` defers to lower configuration layers
+    arg proposal: long=<none> value_names=PROPOSAL index=1 required=true num_args=1..=1 require_equals=false help=Identifier of the proposal to extract
+    arg publish: long=publish value_names=BOOL index=<none> required=false num_args=0..=1 require_equals=true help=Whether to publish the extracted branch; `None` defers to lower layers
