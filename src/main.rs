@@ -1,4 +1,13 @@
 //! `splitters` application entry point.
+//!
+//! The binary reads `std::env::args_os()` once and parses it through
+//! [`splitters::cli::try_parse_from`]. Display requests and usage errors keep
+//! clap's own behaviour, because they are rendered and exited by
+//! `clap::Error::exit`. A successful parse is passed to
+//! [`splitters::cli::dispatch::dispatch`], and the resulting outcome is written
+//! by [`splitters::cli::dispatch::report`]. Interim outcomes and a failure to
+//! load the en-GB catalogue both map to exit status `2`, the design's
+//! operational-failure class; roadmap item 1.1.2 owns the final mapping.
 
 use std::{
     io::{self, Write},

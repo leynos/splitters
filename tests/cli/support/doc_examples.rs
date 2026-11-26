@@ -117,10 +117,10 @@ pub fn load(document: &str) -> Result<Vec<DocExample>, ExampleError> {
     let mut index = 0;
     while index < lines.len() {
         let line = lines.get(index).copied().unwrap_or_default();
-        if !is_fence(line) {
+        let Some(opening) = opening_fence(line) else {
             index += 1;
             continue;
-        }
+        };
         let marker = index.checked_sub(1).and_then(|before| lines.get(before));
         let marker_identifier = marker
             .and_then(|previous| parse_marker(previous, index - 1))
@@ -134,7 +134,7 @@ pub fn load(document: &str) -> Result<Vec<DocExample>, ExampleError> {
                 line: index - 1,
             });
         }
-        let (body, next) = fence_body(&lines, index)?;
+        let (body, next) = fence_body(&lines, index, opening)?;
         examples.push(DocExample {
             id: identifier,
             body,
@@ -144,8 +144,53 @@ pub fn load(document: &str) -> Result<Vec<DocExample>, ExampleError> {
     Ok(examples)
 }
 
-/// Returns whether `line` opens or closes a fenced block.
-fn is_fence(line: &str) -> bool { line.trim_start().starts_with("```") }
+/// One fenced block's delimiter, as CommonMark defines it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct Fence {
+    /// The delimiter character: a backtick or a tilde.
+    marker: char,
+    /// How many delimiter characters the opening line had.
+    length: usize,
+}
+
+/// Returns the fence opened by `line`, or `None` when it opens no block.
+///
+/// A fence is three or more backticks or tildes. A backtick fence's info
+/// string may not contain a backtick, so a line such as ```` ```foo`bar ````
+/// is content rather than a delimiter.
+fn opening_fence(line: &str) -> Option<Fence> {
+    let trimmed = line.trim_start();
+    let marker = trimmed.chars().next()?;
+    if marker != '`' && marker != '~' {
+        return None;
+    }
+    let length = trimmed.chars().take_while(|ch| *ch == marker).count();
+    if length < 3 {
+        return None;
+    }
+    let info = trimmed.get(length..).unwrap_or_default();
+    if marker == '`' && info.contains('`') {
+        return None;
+    }
+    Some(Fence { marker, length })
+}
+
+/// Returns whether `line` closes the block opened by `opening`.
+///
+/// A closing fence uses the same character, is at least as long as the
+/// opening fence, and has only whitespace after its delimiter.
+fn closing_fence(line: &str, opening: Fence) -> bool {
+    let trimmed = line.trim_start();
+    let marker_count = trimmed
+        .chars()
+        .take_while(|ch| *ch == opening.marker)
+        .count();
+    if marker_count < opening.length {
+        return false;
+    }
+    let rest = trimmed.get(marker_count..).unwrap_or_default();
+    rest.trim().is_empty()
+}
 
 /// Parses one marker line.
 ///
@@ -162,11 +207,15 @@ fn parse_marker(line: &str, at: usize) -> Option<Result<String, ExampleError>> {
 
 /// Extracts the body of the fence opened at `open`, returning it and the index
 /// of the first line after the closing fence.
-fn fence_body(lines: &[&str], open: usize) -> Result<(String, usize), ExampleError> {
+fn fence_body(
+    lines: &[&str],
+    open: usize,
+    opening: Fence,
+) -> Result<(String, usize), ExampleError> {
     let mut body = Vec::new();
     let mut index = open + 1;
     while let Some(line) = lines.get(index).copied() {
-        if is_fence(line) {
+        if closing_fence(line, opening) {
             let mut text = body.join("\n");
             text.push('\n');
             return Ok((text, index + 1));
@@ -185,6 +234,63 @@ mod tests {
     use rstest::rstest;
 
     use super::{DocExample, ExampleError, load};
+
+    #[test]
+    fn loads_a_marked_tilde_fence() {
+        let document = concat!(
+            "<!-- tested-example: tilde -->\n",
+            "~~~console\n",
+            "$ splitters --help\n",
+            "Usage: splitters\n",
+            "~~~\n",
+        );
+        let examples = load(document).expect("the tilde example should load");
+        let example = examples
+            .first()
+            .expect("a tilde fence should load one example");
+        assert_eq!(example.id, "tilde", "the marker names the tilde example");
+    }
+
+    #[test]
+    fn an_unmarked_tilde_fence_is_rejected() {
+        let document = "~~~console\n$ splitters --help\n~~~\n";
+        assert_eq!(
+            load(document),
+            Err(ExampleError::UnmarkedFence { line: 0 }),
+            "a tilde fence must carry a marker too",
+        );
+    }
+
+    #[test]
+    fn a_shorter_closing_fence_does_not_close_a_longer_fence() {
+        let document = concat!(
+            "<!-- tested-example: long -->\n",
+            "````console\n",
+            "```rust\n",
+            "```\n",
+        );
+        assert_eq!(
+            load(document),
+            Err(ExampleError::UnterminatedFence { line: 1 }),
+            "only a fence at least as long as the opener may close it",
+        );
+    }
+
+    #[test]
+    fn a_backtick_info_string_with_a_backtick_is_content() {
+        let document = concat!(
+            "<!-- tested-example: info -->\n",
+            "```console\n",
+            "```rust`not-a-fence\n",
+            "```\n",
+        );
+        let examples = load(document).expect("the backtick block should load");
+        let example = examples.first().expect("one backtick example should load");
+        assert_eq!(
+            example.body, "```rust`not-a-fence\n",
+            "a backtick info string may not contain a backtick, so the line is content",
+        );
+    }
 
     #[test]
     fn loads_one_marked_example() {

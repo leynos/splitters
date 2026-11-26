@@ -155,33 +155,50 @@ impl Sandbox {
             .unwrap_or_else(|| self.root.path())
     }
 
-    /// Proves the emptiness check can see files, then asserts no effects.
+    /// Asserts the child left the sandbox exactly as the fixture created it.
+    ///
+    /// The comparison with the baseline happens *before* the scan probe writes
+    /// anything, so a child-created entry can never be masked by the probe.
+    /// The probe runs afterwards on a scratch file that is removed again,
+    /// which proves the scan itself can see files.
     ///
     /// # Errors
     ///
-    /// Returns the first filesystem error from creating, scanning, or removing
-    /// the witness file.
+    /// Returns the first filesystem error from scanning, probing, or removing
+    /// the probe file.
     pub fn assert_untouched(&self, context: &str) -> io::Result<()> {
         let dir = open(self.root.path())?;
-        dir.write("witness", b"witness")?;
-        let saw_witness = snapshot(&dir)?
-            .iter()
-            .any(|path| path == Path::new("witness"));
-        dir.remove_file("witness")?;
-        if !saw_witness {
-            return Err(io::Error::other(
-                "the sandbox scan missed its witness file; the emptiness check is vacuous",
-            ));
-        }
-        let remaining = snapshot(&dir)?;
-        if remaining == self.baseline {
+        let after_child = snapshot(&dir)?;
+        assert_scan_sees_files(&dir)?;
+        if after_child == self.baseline {
             return Ok(());
         }
         Err(io::Error::other(format!(
-            "the binary must not touch its sandbox ({context}); found {remaining:?}, expected {:?}",
+            "the binary must not touch its sandbox ({context}); found {after_child:?}, expected \
+             {:?}",
             self.baseline,
         )))
     }
+}
+
+/// Writes and removes a probe file to prove a sandbox scan is not vacuous.
+///
+/// # Errors
+///
+/// Returns the first filesystem error from writing, scanning, or removing the
+/// probe file.
+fn assert_scan_sees_files(dir: &Dir) -> io::Result<()> {
+    dir.write("scan-probe", b"probe")?;
+    let saw_probe = snapshot(dir)?
+        .iter()
+        .any(|path| path == Path::new("scan-probe"));
+    dir.remove_file("scan-probe")?;
+    if saw_probe {
+        return Ok(());
+    }
+    Err(io::Error::other(
+        "the sandbox scan missed its probe file; the emptiness check is vacuous",
+    ))
 }
 
 /// Opens the sandbox root as a capability directory.

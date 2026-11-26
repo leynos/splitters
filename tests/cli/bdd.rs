@@ -66,6 +66,21 @@ fn standard_error_is_empty(surface_state: &SurfaceState) {
     assert_eq!(run.stderr, "", "standard error must be empty");
 }
 
+#[then("standard error is a usage diagnostic")]
+fn standard_error_is_a_usage_diagnostic(surface_state: &SurfaceState) {
+    let run = last_run(surface_state);
+    assert!(
+        run.stderr.contains("Unknown argument"),
+        "standard error must be an unknown-argument diagnostic; it was {:?}",
+        run.stderr,
+    );
+    assert!(
+        !run.stderr.contains("not implemented yet"),
+        "the command must be rejected before dispatch; standard error was {:?}",
+        run.stderr,
+    );
+}
+
 #[then("standard error says {message:string}")]
 fn standard_error_says(surface_state: &SurfaceState, message: String) {
     let run = last_run(surface_state);

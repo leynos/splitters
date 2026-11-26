@@ -51,6 +51,36 @@ fn usage_errors_use_standard_error(splitters_cmd: Splitters, #[case] args: &[&st
         !run.stderr.is_empty(),
         "usage error {args:?} must explain itself on standard error",
     );
+    assert!(
+        !run.stderr.contains(NOT_IMPLEMENTED),
+        "usage error {args:?} must be a usage diagnostic, not the interim dispatch report; stderr \
+         was {:?}",
+        run.stderr,
+    );
+}
+
+#[rstest]
+fn a_detached_boolean_is_rejected_as_a_usage_error(splitters_cmd: Splitters) {
+    let run = splitters_cmd.run(["extract", "p", "--publish", "false"]);
+    assert_eq!(
+        run.status,
+        Some(2),
+        "a detached boolean value must be a usage error",
+    );
+    assert_eq!(
+        run.stdout, "",
+        "a detached boolean value must leave standard output empty",
+    );
+    assert!(
+        run.stderr.contains("Unknown argument"),
+        "a detached boolean value must be an unknown-argument error; stderr was {:?}",
+        run.stderr,
+    );
+    assert!(
+        !run.stderr.contains(NOT_IMPLEMENTED),
+        "a detached boolean value must not reach dispatch; stderr was {:?}",
+        run.stderr,
+    );
 }
 
 #[rstest]

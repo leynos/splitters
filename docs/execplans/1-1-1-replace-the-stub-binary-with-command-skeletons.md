@@ -517,6 +517,18 @@ revision is recorded in `Revision note`.
   suite passed (31 passed, 1 skipped), the surface snapshot was reviewed
   against design Tables 3–5 and D3–D5 before acceptance, and the two
   test-authoring defects found in the red run were fixed.
+- Post-implementation review (2026-11-26): CodeRabbit's formal review of
+  `fb0042b` found four in-scope harness weaknesses and one module-documentation
+  check. Fixed: the detached-boolean case now requires an unknown-argument
+  diagnostic and rejects the interim dispatch report (end-to-end and BDD); the
+  tested-example loader recognises backtick and tilde fences and validates a
+  closing fence against its opener, with regression cases; `assert_untouched`
+  compares the post-command snapshot before writing its probe, so a
+  child-created entry cannot be masked; and `src/main.rs` plus the three
+  argument modules carry complete module documentation. Three findings against
+  `docs/ortho-config-users-guide.md` were dispositioned out of scope: that file
+  is vendored verbatim from the OrthoConfig `v0.11.0` tag apart from absolute
+  link targets, so correcting upstream prose belongs upstream.
 - Open questions for later items, recorded here as EP-M4 requires: 1.1.4 owns
   whether shared inputs become globals (D12), how the generated keys for
   `proposal` and `branch` are treated (D3), and whether risky fields such as

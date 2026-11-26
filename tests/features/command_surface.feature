@@ -54,6 +54,7 @@ Feature: Splitters command surface
     When the operator runs "splitters extract add-parser --publish false"
     Then the exit status is 2
     And standard output is empty
+    And standard error is a usage diagnostic
 
   Scenario: The documented help matches the binary
     Given the users' guide example "splitters-help"

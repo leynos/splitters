@@ -1,4 +1,11 @@
 //! Arguments for the `validate` command.
+//!
+//! The module declares the `validate` subcommand's flags and configuration
+//! keys. [`ValidateArgs`] is the single declaration used by `clap`,
+//! `OrthoConfig`, and the catalogue identifiers, and it is re-exported through
+//! `cli::args` for use as `Commands::Validate`. The `proposal` operand is
+//! required, `check` is skipped when omitted, and `manifest_dir` and `base`
+//! defer to the lower configuration layers that roadmap item 1.1.4 adds.
 
 use camino::Utf8PathBuf;
 

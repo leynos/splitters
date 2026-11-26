@@ -1,4 +1,10 @@
 //! Arguments for the `map` command.
+//!
+//! The module declares the `map` subcommand's flags and configuration keys.
+//! [`MapArgs`] is the single declaration used by `clap`, `OrthoConfig`, and the
+//! en-GB catalogue identifiers, and it is re-exported through `cli::args` for
+//! use as `Commands::Map`. Every field is optional: an omitted value defers to
+//! the lower configuration layers that roadmap item 1.1.4 adds.
 
 use camino::Utf8PathBuf;
 

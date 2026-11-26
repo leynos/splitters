@@ -1,4 +1,13 @@
 //! Arguments for the `extract` command.
+//!
+//! The module declares the `extract` subcommand's flags and configuration
+//! keys. [`ExtractArgs`] is the single declaration used by `clap`,
+//! `OrthoConfig`, and the catalogue identifiers, and it is re-exported through
+//! `cli::args` for use as `Commands::Extract`. The `proposal` operand is
+//! required, `manifest_dir`, `base`, and `branch` defer to lower configuration
+//! layers, and `publish` is tri-state: omitted defers to those layers, while
+//! `--publish` and `--publish=false` override a configured value. That
+//! `--publish=false` override is the reason the flag is not a bare switch.
 
 use camino::Utf8PathBuf;
 
