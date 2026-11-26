@@ -486,7 +486,7 @@ revision is recorded in `Revision note`.
   require: the BDD harness, the tested-example loader with its CommonMark fence
   rules, the sandbox comparison with entry kinds, and the regression tests the
   review rounds demanded. At the final head the plan-base comparison measures
-  35 files, 2,599 net code lines, 20 configuration lines, and 425 documentation
+  35 files, 2,599 net code lines, 20 configuration lines, and 448 documentation
   lines against `dc5c0b7`. Four of those files (`clippy.toml`, `dylint.toml`,
   `.github/workflows/ci.yml`, and `docs/documentation-style-guide.md`) changed
   only on `main`, so the comparison against the assessed PR base is 32 files.
