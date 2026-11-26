@@ -1,19 +1,8 @@
 //! Library entry points for the `splitters` package.
+//!
+//! Splitters is library-first: the binary parses arguments, reports the
+//! selected command's outcome, and maps it to an exit code, while repository
+//! behaviour belongs to library modules that tests can drive without spawning
+//! the binary. The command-line surface lives in [`cli`].
 
 pub mod cli;
-
-/// Return the current stub greeting used by the binary entry point.
-#[must_use]
-pub const fn greeting() -> &'static str { "Hello from Splitters!" }
-
-#[cfg(test)]
-mod tests {
-    //! Tests for the stub library behaviour.
-
-    use super::greeting;
-
-    #[test]
-    fn greeting_matches_stub_output() {
-        assert_eq!(greeting(), "Hello from Splitters!");
-    }
-}

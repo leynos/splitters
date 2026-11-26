@@ -244,7 +244,9 @@ revision is recorded in `Revision note`.
 - [x] (2026-11-26) `EP-M2` help text is localized through the en-GB catalogue;
   the focused suite reports 40 passed, 1 skipped, and the re-reviewed surface
   snapshot carries the catalogue text.
-- [ ] `EP-M3` the `splitters` binary uses the new surface end to end.
+- [x] (2026-11-26) `EP-M3` the `splitters` binary uses the new surface end to
+  end; the focused `cli` suite reports 32 passed, 0 skipped, after the red run
+  against the stub reported 9 passed and 11 failed.
 - [ ] `EP-M4` documentation, tested guide examples, and roadmap closure.
 
 ## Surprises & discoveries
@@ -287,6 +289,25 @@ revision is recorded in `Revision note`.
   flag as `Print help (see more with '--help')`, because `-h` and `--help` now
   differ. Evidence: the EP-M2 surface snapshot. Impact: none for the contract;
   the users' guide records the rendered text the binary actually produces.
+- Observation: clap renders `--publish` as `--publish[=<BOOL>]`, so the BDD row
+  matcher accepts a bracketed suffix after the option name while still rejecting
+  `--base-ref` for `--base`. Evidence: the EP-M3 focused run.
+- Observation: clap appends `[possible values: true, false]` to a boolean's
+  help, which made the rendered `--publish` line 128 columns and so
+  unrecordable under the repository's 120-column code-block limit. Impact:
+  `publish` sets `hide_possible_values = true`; the listing was redundant for a
+  boolean documented by the boolean model, and the line is now 99 columns.
+- Observation: `rstest-bdd` 0.6.0's Scenario Outline expansion adds a hidden
+  case-index parameter, taking the scenario function to five arguments and
+  tripping the repository's four-argument limit on generated code. Evidence:
+  `clippy::too_many_arguments` at the outline binding. Impact: the feature uses
+  six explicit scenarios named for the command and option; the coverage is
+  unchanged.
+- Observation: `rstest-bdd-macros` 0.6.0's `ScenarioState` derive does not
+  generate `Default` (the vendored guide says it does). Evidence: compile error
+  `SurfaceState: Default is not satisfied`. Impact: the state struct derives
+  `Default` explicitly, and the fixture constructs `Slot::new()` in a statement
+  so rstest's re-emitted body stays a non-trivial block.
 - Observation: the red `EP-M1` run failed with 13 compile errors
   (`E0432`/`E0433`/`E0425` unresolved command-surface items, plus `E0599` and
   `E0382` in the new tests). Impact: the two test-authoring defects were fixed
@@ -459,6 +480,14 @@ revision is recorded in `Revision note`.
   suite passed (31 passed, 1 skipped), the surface snapshot was reviewed
   against design Tables 3–5 and D3–D5 before acceptance, and the two
   test-authoring defects found in the red run were fixed.
+- `EP-M3` (2026-11-26): `cli::dispatch` names the selected command and reports
+  the interim outcome, and `main` builds the en-GB localizer, parses
+  `std::env::args_os()` once, lets clap exit display requests and usage errors,
+  and otherwise writes `splitters <command>: not implemented yet` to standard
+  error with exit status `2`. The stub greeting is deleted. The `cli`
+  integration target covers stream discipline, exit status, non-UTF-8 operands,
+  and the no-effects sandbox, and the BDD scenarios cover the documented
+  surface. The focused suite passed (32 passed, 0 skipped).
 - `EP-M2` (2026-11-26): `locales/en-GB/messages.ftl` owns all help text and
   `cli::localization::help_localizer` builds the en-GB localizer with no
   fallback. The catalogue tests prove the base, about, and help identifiers
@@ -1066,6 +1095,10 @@ green: same command -> 31 passed, 1 skipped
 EP-M2 red:   cargo nextest run --lib -E 'test(/catalogue/)'
              -> E0432 unresolved import crate::cli::localization
 EP-M2 green: same command -> 40 passed, 1 skipped; snapshot re-accepted
+EP-M3 red:   cargo nextest run --test cli
+             -> against the stub: 9 passed, 11 failed ("Hello from Splitters!"
+                on stdout, exit status 0 where 2 was required)
+EP-M3 green: same command -> 32 passed, 0 skipped
 ```
 
 Planning probe (2026-11-20, scratch crate under `target/plan-probe/`, now

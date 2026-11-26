@@ -44,7 +44,8 @@ pub struct ExtractArgs {
         value_name = "BOOL",
         num_args = 0..=1,
         require_equals = true,
-        default_missing_value = "true"
+        default_missing_value = "true",
+        hide_possible_values = true
     )]
     pub publish: Option<bool>,
 }
