@@ -151,6 +151,8 @@ struct Fence {
     marker: char,
     /// How many delimiter characters the opening line had.
     length: usize,
+    /// How many spaces the opening delimiter was indented by.
+    indent: usize,
 }
 
 /// Returns the fence opened by `line`, or `None` when it opens no block.
@@ -159,7 +161,11 @@ struct Fence {
 /// string may not contain a backtick, so a line such as ```` ```foo`bar ````
 /// is content rather than a delimiter.
 fn opening_fence(line: &str) -> Option<Fence> {
-    let trimmed = unindented(line)?;
+    let indent = line.chars().take_while(|ch| *ch == ' ').count();
+    if indent > 3 {
+        return None;
+    }
+    let trimmed = line.get(indent..)?;
     let marker = trimmed.chars().next()?;
     if marker != '`' && marker != '~' {
         return None;
@@ -172,20 +178,20 @@ fn opening_fence(line: &str) -> Option<Fence> {
     if marker == '`' && info.contains('`') {
         return None;
     }
-    Some(Fence { marker, length })
+    Some(Fence {
+        marker,
+        length,
+        indent,
+    })
 }
 
-/// Returns the line after at most three leading spaces.
+/// Removes up to `max` leading spaces from a content line.
 ///
-/// CommonMark allows up to three spaces before a fence; four or more make an
-/// indented code block instead, so such a line can neither open nor close a
-/// fenced block.
-fn unindented(line: &str) -> Option<&str> {
+/// CommonMark removes the opening fence's indentation from each content line
+/// and keeps any indentation beyond it.
+fn strip_indent(line: &str, max: usize) -> &str {
     let spaces = line.chars().take_while(|ch| *ch == ' ').count();
-    if spaces > 3 {
-        return None;
-    }
-    line.get(spaces..)
+    line.get(spaces.min(max)..).unwrap_or(line)
 }
 
 /// Returns whether `line` closes the block opened by `opening`.
@@ -194,9 +200,11 @@ fn unindented(line: &str) -> Option<&str> {
 /// opening fence, and has only spaces or tabs after its delimiter; other
 /// Unicode whitespace does not close a block.
 fn closing_fence(line: &str, opening: Fence) -> bool {
-    let Some(trimmed) = unindented(line) else {
+    let indent = line.chars().take_while(|ch| *ch == ' ').count();
+    if indent > 3 {
         return false;
-    };
+    }
+    let trimmed = line.get(indent..).unwrap_or_default();
     let marker_count = trimmed
         .chars()
         .take_while(|ch| *ch == opening.marker)
@@ -236,7 +244,7 @@ fn fence_body(
             text.push('\n');
             return Ok((text, index + 1));
         }
-        body.push(line);
+        body.push(strip_indent(line, opening.indent));
         index += 1;
     }
     Err(ExampleError::UnterminatedFence { line: open })

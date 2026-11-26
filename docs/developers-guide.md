@@ -336,6 +336,27 @@ The structured command surface is pinned by one `insta` snapshot under
 with design Tables 3 to 5 and the decision log in the ExecPlan that introduced
 the change.
 
+The behaviour-driven layer is `tests/cli/bdd.rs`, whose `#[given]`, `#[when]`,
+and `#[then]` functions are the step definitions, and
+`tests/features/command_surface.feature`, which holds the Gherkin scenarios.
+The scenarios run the binary through the same `splitters_cmd` fixture, and the
+final scenario reads a marked users'-guide example, runs its documented
+command, and compares the result with the fence. Focused runs use
+`cargo nextest run --test cli -E 'test(/bdd/)'`; `make test` runs the BDD
+scenarios with the rest of the suite.
+
+The `cli` target's development dependencies and their purposes are:
+
+- `assert_cmd` runs the built binary and captures its streams and status.
+- `rstest-bdd` and `rstest-bdd-macros` provide the scenario runner and step
+  attributes.
+- `shlex` splits documented and scenario command strings into argument vectors.
+- `googletest` supplies the set-equality and substring matchers used by the
+  declaration and catalogue tests.
+- `pretty_assertions` supplies readable whole-struct and guide-output diffs.
+- `tempfile` creates the sandbox directory that the no-effects checks compare
+  against its baseline.
+
 ### Process-wide state in tests
 
 `clippy.toml` disallows `std::env::set_var`, `std::env::remove_var` and

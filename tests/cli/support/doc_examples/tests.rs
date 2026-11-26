@@ -158,8 +158,13 @@ fn a_three_space_indented_fence_opens_a_block() {
     let examples = load(document).expect("the indented block should load");
     let example = examples.first().expect("one example should load");
     assert_eq!(
-        example.body, "   $ splitters --help\n",
-        "three spaces of indentation are still a fence, and the body keeps its indent",
+        example.body, "$ splitters --help\n",
+        "the opening fence's indentation is removed from content lines",
+    );
+    assert_eq!(
+        example.command_and_output(),
+        Ok(("splitters --help", "")),
+        "an indented example must still split into its command and output",
     );
 }
 
