@@ -322,7 +322,7 @@ temporary sandbox, and sets `GIT_CEILING_DIRECTORIES` above it. The fixture is
 the only way tests start the binary, so the environment and sandbox rules
 cannot be forgotten.
 
-`tests/cli/support/doc_examples.rs` is the shared tested-example loader for
+`tests/cli/support/doc_examples/mod.rs` is the shared tested-example loader for
 user-facing Markdown. It extracts fences marked with
 `<!-- tested-example: <identifier> -->` and rejects an unmarked fence, an
 unterminated fence, a missing identifier, and a duplicate identifier.

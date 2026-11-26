@@ -142,13 +142,14 @@ Classification by whole-file rule:
 Budgets (net lines, each enforced independently):
 
 - Files: stop and escalate if more than 32 non-ExecPlan, non-generated files
-  change. About 26 are planned.
-- Code: stop and escalate above 2,400 net lines (revised from 1,700, then from
-  2,300 for the review round; see D14). The measured change is 2,363. Estimate
-  about 1,300: production 350 (`src/lib.rs`, `src/main.rs`, `src/cli/` with the
-  argument modules, localization, and dispatch), catalogue 35, and tests 900
-  (unit tables and the surface snapshot driver, the end-to-end and BDD
-  (behaviour-driven development) harness with its sandbox fixture, and the
+  change. About 26 are planned. The plan-base comparison now measures 35, and
+  D14 records a 36-file budget for it; the feature delta is 32.
+- Code: stop and escalate above 2,600 net lines (revised from 1,700, then 2,300
+  and 2,400 during the review rounds; see D14). The measured change is 2,520.
+  Estimate about 1,300: production 350 (`src/lib.rs`, `src/main.rs`, `src/cli/`
+  with the argument modules, localization, and dispatch), catalogue 35, and
+  tests 900 (unit tables and the surface snapshot driver, the end-to-end and
+  BDD (behaviour-driven development) harness with its sandbox fixture, and the
   shared tested-example loader with its own tests). The test estimate follows
   the review's comparison with OrthoConfig's `hello_world` example, whose
   localized-help tests alone are 472 lines.
@@ -485,17 +486,17 @@ revision is recorded in `Revision note`.
   require: the BDD harness, the tested-example loader with its CommonMark fence
   rules, the sandbox comparison with entry kinds, and the regression tests the
   review rounds demanded. At the final head the plan-base comparison measures
-  34 files, 2,520 net code lines, 20 configuration lines, and 425 documentation
+  35 files, 2,520 net code lines, 20 configuration lines, and 425 documentation
   lines against `dc5c0b7`. Four of those files (`clippy.toml`, `dylint.toml`,
   `.github/workflows/ci.yml`, and `docs/documentation-style-guide.md`) changed
-  only on `main`, so the feature delta is 30 files and the file budget still
-  passes; if the rebased comparison is the intended measure, the file budget
-  becomes 36. Configuration and documentation stay within their budgets.
-  Upstream changes and required coverage are not removed to fit a budget.
-  Escalation was raised with the user, and each revision is recorded here
-  rather than applied silently. Earlier measurements at intermediate heads were
-  2,163 lines (before the review repairs) and 2,363 (after the first review
-  round); the revisions to 2,300 and 2,400 are superseded by this one.
+  only on `main`, so the comparison against the assessed PR base is 32 files.
+  The 32-file budget applies to the feature delta; the plan-base comparison
+  needs a 36-file budget. Configuration and documentation stay within their
+  budgets. Upstream changes and required coverage are not removed to fit a
+  budget. Escalation was raised with the user, and each revision is recorded
+  here rather than applied silently. Earlier measurements at intermediate heads
+  were 2,163 lines (before the review repairs) and 2,363 (after the first
+  review round); the revisions to 2,300 and 2,400 are superseded by this one.
 - D13. Decision: the users' guide is the single exact copy of rendered help.
   Each documented example begins with a `$ splitters …` command line; the guide
   test runs that command and compares its output with the fence, and fails on
@@ -857,7 +858,7 @@ well-formed-command half of `INV-streams`. The exhaustive `match` and an
   Method: the shared tested-example loader plus `rstest-bdd` scenarios using
   `{cmd:string}` placeholders split with `shlex::split` (assert
   `argv[0] == "splitters"`). Artefact: `tests/cli/guide_examples.rs`,
-  `tests/cli/bdd.rs`, `tests/cli/support/doc_examples.rs`,
+  `tests/cli/bdd.rs`, `tests/cli/support/doc_examples/`,
   `tests/features/command_surface.feature`. Non-vacuity: the loader's own tests
   cover an unmarked fence, an unterminated fence, a marker without an
   identifier, and a duplicate identifier; the guide test fails if any loaded
@@ -1015,7 +1016,7 @@ Assigned: `REQ-help`, `REQ-parse-coverage`, `REQ-streams`, `REQ-no-effects`,
 
 Assigned: `GAP-users-guide`, `GAP-conventions`; D11, D13.
 
-1. Red: write `tests/cli/support/doc_examples.rs` (marker parsing, fence
+1. Red: write `tests/cli/support/doc_examples/` (marker parsing, fence
    extraction, and the four structural failures, with its own `rstest` table)
    and `tests/cli/guide_examples.rs` (load `docs/users-guide.md`, run each
    example's `$ splitters …` line through `splitters_cmd`, compare the rest of
@@ -1336,10 +1337,10 @@ Reuse policy:
   arguments elsewhere, or call an OrthoConfig `load` on a struct.
 - `localized_command` is the only constructor of the command tree used for
   parsing or help, so localization and the fixed width are never skipped.
-- `tests/cli/support/doc_examples.rs` is the shared tested-example loader for
-  user-facing Markdown documents. Tests in the `cli` test target use it
-  directly; no test may copy example text into a fixture. It only extracts and
-  validates marked fences; comparison stays in the calling test.
+- `tests/cli/support/doc_examples/mod.rs` is the shared tested-example
+  loader for user-facing Markdown documents. Tests in the `cli` test target use
+  it directly; no test may copy example text into a fixture. It only extracts
+  and validates marked fences; comparison stays in the calling test.
 - `tests/cli/support/mod.rs::splitters_cmd` is the only way tests start the
   binary, so the environment allowlist and sandbox apply everywhere.
 
