@@ -345,17 +345,19 @@ command, and compares the result with the fence. Focused runs use
 `cargo nextest run --test cli -E 'test(/bdd/)'`; `make test` runs the BDD
 scenarios with the rest of the suite.
 
-The `cli` target's development dependencies and their purposes are:
+The `cli` integration target uses these development dependencies:
 
 - `assert_cmd` runs the built binary and captures its streams and status.
 - `rstest-bdd` and `rstest-bdd-macros` provide the scenario runner and step
   attributes.
 - `shlex` splits documented and scenario command strings into argument vectors.
-- `googletest` supplies the set-equality and substring matchers used by the
-  declaration and catalogue tests.
-- `pretty_assertions` supplies readable whole-struct and guide-output diffs.
 - `tempfile` creates the sandbox directory that the no-effects checks compare
   against its baseline.
+
+The library unit tests under `src/cli/tests/` use `googletest` for the
+set-equality and substring matchers in the declaration and catalogue tables.
+`pretty_assertions` supplies readable whole-struct and guide-output diffs, and
+is shared by those unit tests and the `cli` target.
 
 ### Process-wide state in tests
 

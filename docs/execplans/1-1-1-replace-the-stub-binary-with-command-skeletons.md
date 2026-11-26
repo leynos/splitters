@@ -145,7 +145,7 @@ Budgets (net lines, each enforced independently):
   change. About 26 are planned. The plan-base comparison now measures 35, and
   D14 records a 36-file budget for it; the feature delta is 32.
 - Code: stop and escalate above 2,600 net lines (revised from 1,700, then 2,300
-  and 2,400 during the review rounds; see D14). The measured change is 2,586.
+  and 2,400 during the review rounds; see D14). The measured change is 2,599.
   Estimate about 1,300: production 350 (`src/lib.rs`, `src/main.rs`, `src/cli/`
   with the argument modules, localization, and dispatch), catalogue 35, and
   tests 900 (unit tables and the surface snapshot driver, the end-to-end and
@@ -486,7 +486,7 @@ revision is recorded in `Revision note`.
   require: the BDD harness, the tested-example loader with its CommonMark fence
   rules, the sandbox comparison with entry kinds, and the regression tests the
   review rounds demanded. At the final head the plan-base comparison measures
-  35 files, 2,586 net code lines, 20 configuration lines, and 425 documentation
+  35 files, 2,599 net code lines, 20 configuration lines, and 425 documentation
   lines against `dc5c0b7`. Four of those files (`clippy.toml`, `dylint.toml`,
   `.github/workflows/ci.yml`, and `docs/documentation-style-guide.md`) changed
   only on `main`, so the comparison against the assessed PR base is 32 files.
