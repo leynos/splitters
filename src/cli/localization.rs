@@ -1,9 +1,9 @@
 //! `Fluent` localization for help text and parse diagnostics.
 //!
-//! The catalogue is the only owner of user-facing help text. The declarations
-//! in [`crate::cli::args`] describe Rust semantics, and the prose a reader sees
-//! lives in `locales/en-GB/messages.ftl`. Locale detection is deliberately
-//! absent: it needs an injected environment, which roadmap item 1.1.4 owns.
+//! The catalogue is the only owner of user-facing help text. The argument
+//! structs describe Rust semantics, and the prose a reader sees lives in
+//! `locales/en-GB/messages.ftl`. Locale detection is deliberately absent: it
+//! needs an injected environment, which roadmap item 1.1.4 owns.
 
 use ortho_config::{FluentLocalizer, FluentLocalizerError, langid};
 

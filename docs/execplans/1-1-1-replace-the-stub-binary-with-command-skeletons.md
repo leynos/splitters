@@ -143,14 +143,15 @@ Budgets (net lines, each enforced independently):
 
 - Files: stop and escalate if more than 32 non-ExecPlan, non-generated files
   change. About 26 are planned.
-- Code: stop and escalate above 1,700 net lines. Estimate about 1,300:
-  production 350 (`src/lib.rs`, `src/main.rs`, `src/cli/` with the argument
-  modules, localization, and dispatch), catalogue 35, and tests 900 (unit
-  tables and the surface snapshot driver, the end-to-end and BDD
-  (behaviour-driven development) harness with its sandbox fixture, and the
-  shared tested-example loader with its own tests). The test estimate follows
-  the review's comparison with OrthoConfig's `hello_world` example, whose
-  localized-help tests alone are 472 lines.
+- Code: stop and escalate above 2,300 net lines (revised from 1,700; see D14).
+  The measured change is 2,163. Estimate about 1,300: production 350
+  (`src/lib.rs`, `src/main.rs`, `src/cli/` with the argument modules,
+  localization, and dispatch), catalogue 35, and tests 900 (unit tables and the
+  surface snapshot driver, the end-to-end and BDD (behaviour-driven
+  development) harness with its sandbox fixture, and the shared tested-example
+  loader with its own tests). The test estimate follows the review's comparison
+  with OrthoConfig's `hello_world` example, whose localized-help tests alone
+  are 472 lines.
 - Configuration: stop and escalate above 60 net lines (estimate 35 in
   `Cargo.toml`).
 - Documentation: stop and escalate above 550 net lines. Estimate about 420:
@@ -306,6 +307,17 @@ revision is recorded in `Revision note`.
   `clippy::too_many_arguments` at the outline binding. Impact: the feature uses
   six explicit scenarios named for the command and option; the coverage is
   unchanged.
+- Observation: CodeRabbit's completeness assessment found the public interface
+  differed from the plan: the argument structs sat behind a public `args`
+  module and `CommandName::as_str` was public. Evidence: the assessment at head
+  `578739e`. Impact: `cli` re-exports `MapArgs`, `ValidateArgs`, and
+  `ExtractArgs`, `args` became private, and `as_str` is now `pub(crate)`, so
+  the surface is exactly the plan's list.
+- Observation: the plan's seeded `--branch` trimming fault does not
+  discriminate, because the witness has no leading or trailing whitespace.
+  Evidence: the seeded trimming parser left `option_values_are_stored_verbatim`
+  green. Impact: the recorded fault normalizes `/` to `-`, which fails the
+  witness, and `Artefacts and notes` records both results.
 - Observation: the users' guide records clap's next-line option layout for the
   root `--help`, where `-h, --help` and its description occupy separate lines.
   Evidence: the guide's `splitters-help` example. Impact: the guide test
@@ -467,6 +479,23 @@ revision is recorded in `Revision note`.
   make. The duplication is recorded as an open question for 1.1.4, which owns
   configuration layering and may propose globals. Date/Author: 2026-11-20,
   planning agent.
+- D14. Decision (tolerance outcome, 2026-11-26): the measured change is 2,163
+  net code lines against `dc5c0b7`, above the 1,700-line tolerance, and the
+  budget is revised to 2,300 rather than trimming coverage. Rationale: the
+  overage is entirely test scaffolding that the estimate under-counted (the BDD
+  harness at 297 lines, the tested-example loader at 272, and the sandbox and
+  guide tests), and every plan-required obligation depends on it; deleting it
+  would remove verification the acceptance criteria demand. Files changed are
+  30 against a 32-file budget, configuration is 16 lines against 60, and
+  documentation is 396 against 550, so only the code budget moved. Escalation
+  was raised with the user; the recorded outcome is a revision, not a silent
+  overrun. Rebased onto live `main`, the same command measures 34 files, 2,163
+  code lines, 20 configuration lines, and 425 documentation lines; four of
+  those files (`clippy.toml`, `dylint.toml`, `.github/workflows/ci.yml`, and
+  `docs/documentation-style-guide.md`) changed only on `main`. The file budget
+  applies to the feature delta of 30 files; if the rebased comparison is the
+  intended measure, the file budget becomes 36. Upstream changes are not
+  removed to fit the budget.
 - D13. Decision: the users' guide is the single exact copy of rendered help.
   Each documented example begins with a `$ splitters …` command line; the guide
   test runs that command and compares its output with the fence, and fails on
@@ -488,6 +517,13 @@ revision is recorded in `Revision note`.
   suite passed (31 passed, 1 skipped), the surface snapshot was reviewed
   against design Tables 3–5 and D3–D5 before acceptance, and the two
   test-authoring defects found in the red run were fixed.
+- Open questions for later items, recorded here as EP-M4 requires: 1.1.4 owns
+  whether shared inputs become globals (D12), how the generated keys for
+  `proposal` and `branch` are treated (D3), and whether risky fields such as
+  `check` and `publish` may come from a repository-committed file; 3.2.1 owns
+  the stored format of `--check` (D6); 5.2.2 owns the `cargo orthohelp` locale
+  limitation (D7) and the documentation-metadata issue in
+  `Surprises & discoveries`.
 - `EP-M4` (2026-11-26): `docs/users-guide.md` records the rendered help as
   four tested examples, the option tables, the interim exit status, and the
   configuration gap; ADR-0001 records the declaration and help-text
@@ -770,8 +806,9 @@ well-formed-command half of `INV-streams`. The exhaustive `match` and an
   rows; rejecting rows assert the specific `clap::error::ErrorKind`
   (`UnknownArgument` for `--publish false`, `InvalidValue` for
   `--publish=maybe`, `MissingRequiredArgument` for a missing proposal). Seeded
-  fault: a temporary trimming `value_parser` on `--branch` must fail the
-  witness row.
+  fault: a temporary normalizing `value_parser` on `--branch` (`/` to `-`) must
+  fail the witness row. A trimming parser was tried first and recorded as
+  non-discriminating, because the witness has no outer whitespace.
 - Obligation: `INV-catalogue-ids-agree`, `INV-catalogue-complete`,
   `INV-help-localized`. Method: `rstest` tables; the completeness test reads
   identifiers from the embedded catalogue text with the pattern
@@ -1120,6 +1157,41 @@ EP-M4 red:   cargo nextest run --test cli -E 'test(/guide/)'
              -> E0583-style include_str failure: docs/users-guide.md missing
 EP-M4 green: cargo nextest run --test cli -> 45 passed, 0 skipped
 ```
+
+Seeded faults (each applied, observed, reverted; `git status --short` showed
+only intended changes afterwards, and no `.snap.new` remained):
+
+| Fault                                               | Observed failure                                                                                                        |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Remove `require_equals` from `publish`              | `command_surface_is_pinned` snapshot diff                                                                               |
+| Add `#[arg(long)] verbose` to the root `Cli`        | `root_declares_only_help_and_version` names `verbose`; snapshot diff                                                    |
+| Add `skip_cli` + `#[arg(long)] colour` to `MapArgs` | `clap_arguments_match_ortho_config_ids` reports `colour` unexpected; snapshot diff                                      |
+| Normalize `--branch` values (`/` to `-`)            | `option_values_are_stored_verbatim::case_2_branch` fails the verbatim witness                                           |
+| Trim `--branch` values                              | not discriminating: the witness has no outer whitespace (recorded above)                                                |
+| Delete one `-args-check-help` catalogue line        | `catalogue_declares_exactly_the_generated_identifiers` names it missing; `rendered_help_uses_catalogue_text_only` fails |
+| Add a stale `splitters.cli.map-args-colour-help`    | same test names it unexpected                                                                                           |
+| Change `MapArgs` `localization_base`                | `localization_base_agrees_with_the_command_name` and the catalogue set fail                                             |
+| `std::fs::create_dir_all("splitters")` in `main`    | every `commands_leave_the_sandbox_untouched` row reports the stray directory                                            |
+| `std::env::args()` in `main`                        | `a_non_utf8_operand_is_a_usage_error` fails                                                                             |
+| Edit one word of a guide example                    | `the_documented_output_matches_the_binary` fails with a diff                                                            |
+
+CI durations for the tolerance check (`build-test` job, successful runs).
+`ci.yml` has no `push` trigger, so no literal `main`-branch run exists. The
+agreed substitute baseline is the latest green pull request targeting `main`
+before the `EP-M1` commit: run 45610333088 (PR #91), 3m50s. The earlier
+`deec445` and `2da5797` durations were pull-request runs on this branch, not
+`main` runs, and are superseded.
+
+```plaintext
+main-targeting PR baseline  445e4f1  12:05:32Z -> 12:09:22Z  (3m50s)
+branch after EP-M4          9f454ef  07:44:42Z -> 07:51:54Z  (7m12s)
+branch after repair         578739e  08:06:17Z -> 08:12:31Z  (6m14s)
+rebased head                709d4cd  09:57:54Z -> 10:05:06Z  (7m12s)
+```
+
+Growth against the baseline is 2m24s to 3m22s, inside the five-minute
+tolerance. Run 45742732950 is later than the branch's first push and is not a
+usable pre-change baseline.
 
 Planning probe (2026-11-20, scratch crate under `target/plan-probe/`, now
 deleted) declared the three structs with `clap` 4.6.9, `ortho_config` 0.11.0,

@@ -26,7 +26,7 @@ pub enum CommandName {
 impl CommandName {
     /// Returns the command-line spelling of this command.
     #[must_use]
-    pub const fn as_str(self) -> &'static str {
+    pub(crate) const fn as_str(self) -> &'static str {
         match self {
             Self::Map => "map",
             Self::Validate => "validate",

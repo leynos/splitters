@@ -7,7 +7,7 @@
 //! discovery and merging are deliberately not wired here; roadmap item 1.1.4
 //! owns them.
 
-pub mod args;
+mod args;
 pub mod dispatch;
 pub mod localization;
 
@@ -16,7 +16,7 @@ mod tests;
 
 use std::ffi::OsString;
 
-use args::{ExtractArgs, MapArgs, ValidateArgs};
+pub use args::{ExtractArgs, MapArgs, ValidateArgs};
 use clap::{Command, CommandFactory};
 use ortho_config::{LocalizeCmd, Localizer, parse_localized_command};
 
