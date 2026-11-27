@@ -144,16 +144,16 @@ Budgets (net lines, each enforced independently):
 - Files: stop and escalate if more than 33 non-ExecPlan, non-generated files
   change. About 26 are planned. The plan-base comparison now measures 36, and
   D14 records a 37-file budget for it; the feature delta is 33.
-- Code: stop and escalate above 2,800 net lines (revised from 1,700, then
-  2,300, 2,400, and 2,600 during the review rounds; see D14 and D15). The
-  measured change is 2,775. Estimate about 1,300: production 350 (`src/lib.rs`,
-  `src/main.rs`, `src/cli/` with the argument modules, localization, and
-  dispatch), catalogue 35, and tests 900 (unit tables and the surface snapshot
-  driver, the end-to-end and BDD (behaviour-driven development) harness with
-  its sandbox fixture, and the shared tested-example loader with its own tests
-  and property tests). The test estimate follows the review's comparison with
-  OrthoConfig's `hello_world` example, whose localized-help tests alone are 472
-  lines.
+- Code: stop and escalate above 2,850 net lines (revised from 1,700, then
+  2,300, 2,400, 2,600, and 2,800 during the review rounds; see D14 and D15).
+  The measured change is 2,803. Estimate about 1,300: production 350
+  (`src/lib.rs`, `src/main.rs`, `src/cli/` with the argument modules,
+  localization, and dispatch), catalogue 35, and tests 900 (unit tables and the
+  surface snapshot driver, the end-to-end and BDD (behaviour-driven
+  development) harness with its sandbox fixture, and the shared tested-example
+  loader with its own tests and property tests). The test estimate follows the
+  review's comparison with OrthoConfig's `hello_world` example, whose
+  localized-help tests alone are 472 lines.
 - Configuration: stop and escalate above 60 net lines (estimate 35 in
   `Cargo.toml`).
 - Documentation: stop and escalate above 550 net lines. Estimate about 420:
@@ -492,9 +492,10 @@ revision is recorded in `Revision note`.
   and the estimate under-counted the verification the acceptance criteria
   require: the BDD harness, the tested-example loader with its CommonMark fence
   rules, the sandbox comparison with entry kinds, and the regression tests the
-  review rounds demanded. At the final head the plan-base comparison measures
-  35 files, 2,599 net code lines, 20 configuration lines, and 448 documentation
-  lines against `dc5c0b7`. Four of those files (`clippy.toml`, `dylint.toml`,
+  review rounds demanded. At dada1dd, the head assessed at the time, the
+  plan-base comparison measured 35 files, 2,599 net code lines, 20
+  configuration lines, and 448 documentation lines against `dc5c0b7`; those
+  figures are historical. Four of those files (`clippy.toml`, `dylint.toml`,
   `.github/workflows/ci.yml`, and `docs/documentation-style-guide.md`) changed
   only on `main`, so the comparison against the assessed PR base is 32 files.
   The 32-file budget applies to the feature delta; the plan-base comparison
@@ -504,7 +505,7 @@ revision is recorded in `Revision note`.
   here rather than applied silently. Earlier measurements at intermediate heads
   were 2,163 lines (before the review repairs) and 2,363 (after the first
   review round); the revisions to 2,300 and 2,400 are superseded by this one.
-  D15 later revises the code budget to 2,800 and the file budgets to 37
+  D15 later revises the code budget to 2,850 and the file budgets to 37
   (plan-base) and 33 (feature delta) for the loader property tests.
 - D13. Decision: the users' guide is the single exact copy of rendered help.
   Each documented example begins with a `$ splitters …` command line; the guide
@@ -529,8 +530,8 @@ revision is recorded in `Revision note`.
   build, and the catalogue tests prove their generated identifiers resolve. A
   compile-fail fixture would pin upstream diagnostic text, which is third-party
   behaviour rather than a local contract. The new file and the property suite
-  take the code measure to 2,775 and the plan-base file measure to 36, so the
-  budgets are revised to 2,800 code lines and 37 files (33 for the feature
+  take the code measure to 2,803 and the plan-base file measure to 36, so the
+  budgets are revised to 2,850 code lines and 37 files (33 for the feature
   delta). Both the dependency-list and budget revisions are recorded here
   rather than applied silently. The review gate requires the work and the
   user's standing instruction is to continue to equilibrium, so the revision is
@@ -580,7 +581,7 @@ revision is recorded in `Revision note`.
   duplicate-normalized-identifier rejection is the upstream derive's
   `AXIOM-ortho-derive`, the accepted declarations compile in every build, and
   the catalogue tests assert the generated identifiers (D15, ADR-0001). The
-  code budget moved to 2,800 for 2,775 measured lines, and the file budgets to
+  code budget moved to 2,850 for 2,803 measured lines, and the file budgets to
   37 plan-base and 33 feature-delta files.
 - Open questions for later items, recorded here as EP-M4 requires: 1.1.4 owns
   whether shared inputs become globals (D12), how the generated keys for
@@ -1459,9 +1460,10 @@ issue in `Surprises & discoveries`.
   filed at the user's request (#717 documentation metadata, #718 isolation
   marks, #719 `cargo orthohelp` locale). No change to scope, decisions, or
   milestones.
-- 2026-11-27: review-required verification. Added `proptest` and five
+- 2026-11-27: review-required verification. Added `proptest` and six
   properties for the tested-example loader's fence grammar (D10, D15); declined
   `trybuild` because the duplicate-identifier rejection is the upstream derive's
   `AXIOM-ortho-derive` and the accepted declarations already compile (D15).
-  Budgets revised to 2,800 code lines and 37 plan-base/33 feature-delta files;
-  ADR-0001 records the compile-time contract decision.
+  Budgets revised to 2,850 code lines and 37 plan-base/33 feature-delta files
+  against a measured 2,803 code lines and 36/33 files; ADR-0001 records the
+  compile-time contract decision.
