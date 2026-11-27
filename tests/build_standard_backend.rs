@@ -367,8 +367,14 @@ fn lint_with_script(scratch: &str, script: &str) -> Read<(Output, String)> {
         // `WHITAKER=whitaker` is set on the command line, ahead of the bogus
         // value the environment supplies below.
         // `INTERROGATE=true` replaces the Interrogate command, because `uv` is
-        // not on this fake `PATH`.
+        // not on this fake `PATH`. The YAML lint prerequisites need `bash`,
+        // `git`, `xargs` and the linters, which it lacks too, and are not under
+        // test: `-o` tells Make to treat both targets as up to date.
         .args([
+            "-o",
+            "yamllint",
+            "-o",
+            "actionlint",
             "lint",
             "CARGO=true",
             "WHITAKER=whitaker",
@@ -491,8 +497,14 @@ fn a_missing_whitaker_fails_lint_with_installation_guidance() {
     let tools = tool_directory("whitaker-absent").expect("prepare the tool directory");
     let output = Command::new("make")
         // `INTERROGATE=true` replaces the Interrogate command, because `uv` is
-        // not on this fake `PATH`.
+        // not on this fake `PATH`. The YAML lint prerequisites need `bash`,
+        // `git`, `xargs` and the linters, which it lacks too, and are not under
+        // test: `-o` tells Make to treat both targets as up to date.
         .args([
+            "-o",
+            "yamllint",
+            "-o",
+            "actionlint",
             "lint",
             "CARGO=true",
             "WHITAKER=whitaker",
