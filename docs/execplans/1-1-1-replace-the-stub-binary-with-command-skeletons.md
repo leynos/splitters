@@ -141,18 +141,19 @@ Classification by whole-file rule:
 
 Budgets (net lines, each enforced independently):
 
-- Files: stop and escalate if more than 32 non-ExecPlan, non-generated files
-  change. About 26 are planned. The plan-base comparison now measures 35, and
-  D14 records a 36-file budget for it; the feature delta is 32.
-- Code: stop and escalate above 2,600 net lines (revised from 1,700, then 2,300
-  and 2,400 during the review rounds; see D14). The measured change is 2,599.
-  Estimate about 1,300: production 350 (`src/lib.rs`, `src/main.rs`, `src/cli/`
-  with the argument modules, localization, and dispatch), catalogue 35, and
-  tests 900 (unit tables and the surface snapshot driver, the end-to-end and
-  BDD (behaviour-driven development) harness with its sandbox fixture, and the
-  shared tested-example loader with its own tests). The test estimate follows
-  the review's comparison with OrthoConfig's `hello_world` example, whose
-  localized-help tests alone are 472 lines.
+- Files: stop and escalate if more than 33 non-ExecPlan, non-generated files
+  change. About 26 are planned. The plan-base comparison now measures 36, and
+  D14 records a 37-file budget for it; the feature delta is 33.
+- Code: stop and escalate above 2,800 net lines (revised from 1,700, then
+  2,300, 2,400, and 2,600 during the review rounds; see D14 and D15). The
+  measured change is 2,775. Estimate about 1,300: production 350 (`src/lib.rs`,
+  `src/main.rs`, `src/cli/` with the argument modules, localization, and
+  dispatch), catalogue 35, and tests 900 (unit tables and the surface snapshot
+  driver, the end-to-end and BDD (behaviour-driven development) harness with
+  its sandbox fixture, and the shared tested-example loader with its own tests
+  and property tests). The test estimate follows the review's comparison with
+  OrthoConfig's `hello_world` example, whose localized-help tests alone are 472
+  lines.
 - Configuration: stop and escalate above 60 net lines (estimate 35 in
   `Cargo.toml`).
 - Documentation: stop and escalate above 550 net lines. Estimate about 420:
@@ -455,15 +456,21 @@ revision is recorded in `Revision note`.
   copies of the same prose would drift silently. The catalogue tests prove
   every identifier exists and none is stale. Date/Author: 2026-11-20, planning
   agent.
-- D10. Decision (revised after review): no Verus proof, Kani harness, model
-  checker, or `proptest` property is planned. Verification is by `rstest`
-  tables (including fixed-witness value cases), one `insta` snapshot of the
-  structured command surface, `rstest-bdd` scenarios, `assert_cmd` end-to-end
-  tests, and tested users'-guide examples. Rationale: see
-  `Formal verification decision`. The draft's verbatim-values property tested
-  clap behaviour that the plan already treats as an axiom; fixed witnesses plus
-  a seeded fault give the same protection. Date/Author: 2026-11-20, planning
-  agent.
+- D10. Decision (revised after review, then 2026-11-27): no Verus proof, Kani
+  harness, or model checker is planned. Verification is by `rstest` tables
+  (including fixed-witness value cases), one `insta` snapshot of the structured
+  command surface, `rstest-bdd` scenarios, `assert_cmd` end-to-end tests,
+  tested users'-guide examples, and one `proptest` suite for the tested-example
+  loader. The loader is this repository's own text parser, so its fence grammar
+  is sampled as well as exemplified; the command surface still treats clap's
+  parser as an axiom, which is why the draft's verbatim-values property was
+  replaced by fixed witnesses plus a seeded fault. A `trybuild` suite is not
+  added: the compile-time rejection this item relies on is the upstream
+  `ortho_config` derive's behaviour, recorded as `AXIOM-ortho-derive`, while
+  the accepted declarations compile in every build and the catalogue tests
+  assert their generated identifiers. Rationale: see
+  `Formal verification decision` and D15. Date/Author: 2026-11-20, planning
+  agent; revised 2026-11-27.
 - D11. Decision (revised after review): record the help-text and locale policy
   and the declaration conventions (D1, D2, D5, D7, D9) in
   `docs/adrs/adr-0001-command-line-declaration-and-help-text-conventions.md`,
@@ -497,6 +504,8 @@ revision is recorded in `Revision note`.
   here rather than applied silently. Earlier measurements at intermediate heads
   were 2,163 lines (before the review repairs) and 2,363 (after the first
   review round); the revisions to 2,300 and 2,400 are superseded by this one.
+  D15 later revises the code budget to 2,800 and the file budgets to 37
+  (plan-base) and 33 (feature delta) for the loader property tests.
 - D13. Decision: the users' guide is the single exact copy of rendered help.
   Each documented example begins with a `$ splitters …` command line; the guide
   test runs that command and compares its output with the fence, and fails on
@@ -508,6 +517,25 @@ revision is recorded in `Revision note`.
   `docs/documentation-style-guide.md` for any fenced users'-guide example, and
   the user asked for the users' guide to be updated; it is scoped to what this
   guide needs. Date/Author: 2026-11-20, planning agent.
+- D15. Decision (review-required verification, 2026-11-27): add `proptest`
+  1.12.0 as a development dependency and cover the tested-example loader's
+  fence grammar with properties; do not add `trybuild`. The review's property
+  prompt names rules whose input axes (delimiter character and length, opening
+  and closing indentation, closing-fence length, trailing blanks, and body
+  content) are broad enough that sampled properties add coverage beyond the
+  fixed examples. The duplicate-identifier rejection a `trybuild` fixture would
+  exercise is the `ortho_config` derive's compile-time behaviour, already
+  recorded as `AXIOM-ortho-derive`: the accepted declarations compile in every
+  build, and the catalogue tests prove their generated identifiers resolve. A
+  compile-fail fixture would pin upstream diagnostic text, which is third-party
+  behaviour rather than a local contract. The new file and the property suite
+  take the code measure to 2,775 and the plan-base file measure to 36, so the
+  budgets are revised to 2,800 code lines and 37 files (33 for the feature
+  delta). Both the dependency-list and budget revisions are recorded here
+  rather than applied silently. The review gate requires the work and the
+  user's standing instruction is to continue to equilibrium, so the revision is
+  reported with the delivery record rather than pausing the loop. Date/Author:
+  2026-11-27, implementation agent.
 
 ## Outcomes & retrospective
 
@@ -542,6 +570,18 @@ revision is recorded in `Revision note`.
   `docs/ortho-config-users-guide.md` were dispositioned out of scope: that file
   is vendored verbatim from the OrthoConfig `v0.11.0` tag apart from absolute
   link targets, so correcting upstream prose belongs upstream.
+- Review-required verification (2026-11-27): CodeRabbit's pre-merge check
+  asked for a property test over the tested-example loader and for compile-time
+  (`trybuild`) coverage. Added `proptest` 1.12.0 and six properties in
+  `tests/cli/support/doc_examples/properties.rs` covering shorter closers,
+  four-space indentation, marked-block extraction with indentation stripping,
+  shorter runs inside a body, unmarked fences, and the shell-prompt split; two
+  seeded faults each failed with a minimal input. Declined `trybuild`: the
+  duplicate-normalized-identifier rejection is the upstream derive's
+  `AXIOM-ortho-derive`, the accepted declarations compile in every build, and
+  the catalogue tests assert the generated identifiers (D15, ADR-0001). The
+  code budget moved to 2,800 for 2,775 measured lines, and the file budgets to
+  37 plan-base and 33 feature-delta files.
 - Open questions for later items, recorded here as EP-M4 requires: 1.1.4 owns
   whether shared inputs become globals (D12), how the generated keys for
   `proposal` and `branch` are treated (D3), and whether risky fields such as
@@ -784,7 +824,8 @@ well-formed-command half of `INV-streams`. The exhaustive `match` and an
   failures such as broken pipes.
 - `AXIOM-ortho-derive`: `ortho_config` 0.11.0 generates `LOCALIZATION_BASE`,
   `ABOUT_ID`, and `ARG_IDS` as documented and rejects duplicate normalized
-  argument identifiers at compile time.
+  argument identifiers at compile time. D15 records why the rejection is
+  trusted rather than pinned by a `trybuild` fixture.
 - `AXIOM-ortho-localize`: `parse_localized_command` and
   `LocalizeCmd::with_base(..).localize(..)` look up `<base>-<command>-about` and
   `<base>-<command>-args-<arg>-help` and fall back to clap's text when an
@@ -859,26 +900,59 @@ well-formed-command half of `INV-streams`. The exhaustive `match` and an
 - Obligation: `INV-guide-matches-binary` and the BDD scenarios.
   Method: the shared tested-example loader plus `rstest-bdd` scenarios using
   `{cmd:string}` placeholders split with `shlex::split` (assert
-  `argv[0] == "splitters"`). Artefact: `tests/cli/guide_examples.rs`,
-  `tests/cli/bdd.rs`, `tests/cli/support/doc_examples/`,
+  `argv[0] == "splitters"`). The loader's fence grammar also has a `proptest`
+  suite over delimiter character and length, opening and closing indentation,
+  closing-fence length, trailing blanks, and body content (256 cases per
+  property). Artefact: `tests/cli/guide_examples.rs`, `tests/cli/bdd.rs`,
+  `tests/cli/support/doc_examples/` including `properties.rs`,
   `tests/features/command_surface.feature`. Non-vacuity: the loader's own tests
   cover an unmarked fence, an unterminated fence, a marker without an
   identifier, and a duplicate identifier; the guide test fails if any loaded
   identifier is unhandled; seeded fault: editing one word of a documented help
-  example must fail with a diff.
+  example must fail with a diff. Seeded property faults: changing
+  `opening_fence`'s indent threshold from 3 to 4 fails
+  `an_opener_indented_four_or_more_spaces_never_opens_a_block`, and accepting a
+  closer one character short in `closing_fence` fails
+  `a_shorter_closer_never_closes_the_block`, each with a minimal generated
+  input.
 
 ### Formal verification decision
 
-No Verus proof, Kani harness, model checker, or property test is warranted.
-This item introduces no business logic: it declares data types and delegates
-parsing to `clap` (an axiom). Its invariants range over finite declarations,
-which tables cover exhaustively, and over the process contract, which only
-end-to-end tests can observe. A Verus proof would have to model clap's parser
-(third-party behaviour) and would still leave the executable unverified; Kani
-adds nothing without arithmetic, `unsafe` code, or a bounded state machine. The
-first items where Verus is plausibly warranted are 1.2.2 (proposal-graph
-acyclicity) and 4.1.3 (exact fragment-set subtraction); no proof obligations
-for them are made here. Recorded as D10.
+No Verus proof, Kani harness, or model checker is warranted. This item
+introduces no business logic: it declares data types and delegates parsing to
+`clap` (an axiom). Its command-surface invariants range over finite
+declarations, which tables cover exhaustively, and over the process contract,
+which only end-to-end tests can observe. A Verus proof would have to model
+clap's parser (third-party behaviour) and would still leave the executable
+unverified; Kani adds nothing without arithmetic, `unsafe` code, or a bounded
+state machine. The first items where Verus is plausibly warranted are 1.2.2
+(proposal-graph acyclicity) and 4.1.3 (exact fragment-set subtraction); no
+proof obligations for them are made here. Recorded as D10.
+
+One property suite is warranted, for the tested-example loader rather than for
+the command surface. The loader is this repository's own CommonMark-subset
+parser, and its inputs vary along delimiter character, delimiter length,
+opening and closing indentation, closing-fence length, trailing blanks, and
+body content. `tests/cli/support/doc_examples/properties.rs` samples those axes
+with `proptest` and asserts the rules named in review: a shorter closer never
+closes, four or more spaces never open, a marked block loads one example with
+its identifier and indentation-stripped body, a shorter run inside the body is
+content, an unmarked fence is rejected, and `command_and_output` succeeds
+exactly when the body starts with the shell prompt. The fixed example tests
+stay beside the properties as the readable specification; seeded faults in
+`opening_fence` (indent threshold 3 to 4) and `closing_fence` (accepting a
+closer one character short) each fail a property with a minimal input. Recorded
+as D10 and D15.
+
+The `ortho_config` derive's compile-time rejection of duplicate normalized
+argument identifiers is not covered by a `trybuild` fixture. It is
+`AXIOM-ortho-derive` in this plan: upstream macro behaviour that this item
+trusts rather than verifies, exactly as it trusts clap's parser. The accepted
+declarations exercise the compile-pass path in every build, and
+`INV-catalogue-ids-agree` plus `INV-catalogue-complete` assert the generated
+identifiers at runtime. A compile-fail fixture would pin the upstream
+diagnostic's text, which is third-party behaviour, not a local contract; see
+ADR-0001's compile-time contract note. Recorded as D15.
 
 ### Suggested BDD features
 
@@ -1181,6 +1255,9 @@ EP-M3 green: same command -> 32 passed, 0 skipped
 EP-M4 red:   cargo nextest run --test cli -E 'test(/guide/)'
              -> E0583-style include_str failure: docs/users-guide.md missing
 EP-M4 green: cargo nextest run --test cli -> 45 passed, 0 skipped
+review (2026-11-27):
+       cargo nextest run --test cli -E 'test(/doc_examples/)'
+       -> 23 passed (17 example and table cases, 6 properties)
 ```
 
 Seeded faults (each applied, observed, reverted; `git status --short` showed
@@ -1199,6 +1276,8 @@ only intended changes afterwards, and no `.snap.new` remained):
 | `std::fs::create_dir_all("splitters")` in `main`    | every `commands_leave_the_sandbox_untouched` row reports the stray directory                                            |
 | `std::env::args()` in `main`                        | `a_non_utf8_operand_is_a_usage_error` fails                                                                             |
 | Edit one word of a guide example                    | `the_documented_output_matches_the_binary` fails with a diff                                                            |
+| Change the loader's opener indent threshold 3 to 4  | `an_opener_indented_four_or_more_spaces_never_opens_a_block` fails; shrunken input has a 4-space opener                 |
+| Accept a closer one character short                 | `a_shorter_closer_never_closes_the_block` fails; shrunken input has opener length 4 and closer length 3                 |
 
 CI durations for the tolerance check (`build-test` job, successful runs).
 `ci.yml` has no `push` trigger, so no literal `main`-branch run exists. The
@@ -1274,13 +1353,13 @@ Authorized dependencies (caret requirements):
   and string matchers such as `unordered_elements_are!` and
   `contains_substring`), `insta = "1.49.0"` (the surface snapshot),
   `pretty_assertions = "1.4.1"` (readable diffs for whole-struct and
-  guide-output comparisons), `rstest-bdd = "0.6.0"`,
-  `rstest-bdd-macros = "0.6.0"`, `shlex = "2.0.1"`, and `tempfile = "3.27.0"`
-  (already in the closure through `insta`). Existing `cap-std`, `rstest`, and
-  `toml` stay as they are.
+  guide-output comparisons), `proptest = "1.12.0"` (the loader's fence
+  properties; see D15), `rstest-bdd = "0.6.0"`, `rstest-bdd-macros = "0.6.0"`,
+  `shlex = "2.0.1"`, and `tempfile = "3.27.0"` (already in the closure through
+  `insta`). Existing `cap-std`, `rstest`, and `toml` stay as they are.
 - Not added: `thiserror` (no error type), `mockable` (no environment access),
-  `proptest` (D10), and `fluent-bundle` (OrthoConfig re-exports the Fluent
-  types it needs).
+  `trybuild` (the derive's compile-time rejection is `AXIOM-ortho-derive`; see
+  D15), and `fluent-bundle` (OrthoConfig re-exports the Fluent types it needs).
 
 Public library surface (all in `splitters::cli`):
 
@@ -1380,3 +1459,9 @@ issue in `Surprises & discoveries`.
   filed at the user's request (#717 documentation metadata, #718 isolation
   marks, #719 `cargo orthohelp` locale). No change to scope, decisions, or
   milestones.
+- 2026-11-27: review-required verification. Added `proptest` and five
+  properties for the tested-example loader's fence grammar (D10, D15); declined
+  `trybuild` because the duplicate-identifier rejection is the upstream derive's
+  `AXIOM-ortho-derive` and the accepted declarations already compile (D15).
+  Budgets revised to 2,800 code lines and 37 plan-base/33 feature-delta files;
+  ADR-0001 records the compile-time contract decision.

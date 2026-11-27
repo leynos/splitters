@@ -253,3 +253,7 @@ fn fence_body(
 #[cfg(test)]
 #[path = "tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "properties.rs"]
+mod properties;

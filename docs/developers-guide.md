@@ -331,6 +331,18 @@ output with the fence. To update an example, change the binary or catalogue, run
 `make test`, copy the reviewed output into the guide's fence, and rerun the
 gate; never paste output without reviewing it.
 
+The loader's fence grammar also has a property suite in
+`tests/cli/support/doc_examples/properties.rs`. `proptest` samples delimiter
+character and length, opening and closing indentation, closing-fence length,
+trailing blanks, and body content, and asserts the rules the example tests pin
+one point at a time: a shorter closer never closes, four or more spaces never
+open a block, a marked block loads its identifier and indentation-stripped
+body, a shorter run inside the body is content, an unmarked fence is rejected,
+and `command_and_output` succeeds exactly at the shell prompt. The example
+tests stay as the readable specification. The derive's compile-time rejection
+of duplicate normalized argument identifiers belongs to `ortho_config`;
+ADR-0001 records why no `trybuild` fixture pins that upstream diagnostic.
+
 The structured command surface is pinned by one `insta` snapshot under
 `src/cli/tests/snapshots/`. Accept a snapshot update only after comparing it
 with design Tables 3 to 5 and the decision log in the ExecPlan that introduced
@@ -348,6 +360,7 @@ scenarios with the rest of the suite.
 The `cli` integration target uses these development dependencies:
 
 - `assert_cmd` runs the built binary and captures its streams and status.
+- `proptest` generates the loader's fence-rule inputs for the property suite.
 - `rstest-bdd` and `rstest-bdd-macros` provide the scenario runner and step
   attributes.
 - `shlex` splits documented and scenario command strings into argument vectors.

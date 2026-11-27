@@ -101,6 +101,20 @@ is that base plus the command name, so the identifier the localizer looks up
 generates. A test asserts the agreement, because a mismatch falls back silently
 to clap's text.
 
+### Compile-time contract ownership
+
+The declarations rely on `ortho_config`'s derive to reject invalid ones at
+compile time, including two fields whose clap argument identifiers normalize to
+the same Fluent identifier. That rejection is the upstream crate's compile-time
+behaviour, not a contract this repository implements: the declarations here
+exercise the accepted path on every build, and the catalogue tests prove the
+generated identifiers resolve. A `trybuild` compile-fail fixture would pin the
+upstream diagnostic's text, so the repository does not add one; the plan
+records the same decision as `AXIOM-ortho-derive` and D15. If Splitters later
+owns a macro or a compile-time contract of its own, `trybuild` (as `AGENTS.md`
+requires for compile-fail and compile-pass contracts) is the right tool for
+that contract.
+
 ### Boolean flags
 
 A boolean option is `Option<bool>` with `num_args = 0..=1`,
