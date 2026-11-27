@@ -160,5 +160,5 @@ yamllint: .SHELLFLAGS := -eo pipefail -c
 yamllint: ## Lint every tracked YAML file strictly
 	git ls-files -z '*.yml' '*.yaml' | xargs -0 -r $(YAMLLINT) --strict --
 
-actionlint: ## Lint the GitHub Actions workflows, including their shell scripts
+actionlint: ## Lint the GitHub Actions workflows (and their shell scripts when ShellCheck is on PATH)
 	$(ACTIONLINT)
