@@ -47,7 +47,7 @@ jobs:
         with:
           cranelift: 'true'
       - name: Set up uv for the YAML lint tools
-        uses: astral-sh/setup-uv@c5680ec91f7b9b91406fab4ded5d45245abf7b67
+        uses: astral-sh/setup-uv@8d293aae84cfe34ff8371dcea170a3c80e239e35
         with:
           enable-cache: false
       - name: Install the YAML lint tools
@@ -55,7 +55,7 @@ jobs:
       - name: Lint
         run: make lint
       - name: Setup uv
-        uses: astral-sh/setup-uv@b06acff4b6a41bdd9cdac56507ead0bd7734e757
+        uses: astral-sh/setup-uv@8d293aae84cfe34ff8371dcea170a3c80e239e35
         with:
           # A Rust-only repository has no Python dependency manifest for the
           # cache key, so caching would only warn about unmatched inputs.
