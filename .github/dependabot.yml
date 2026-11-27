@@ -36,7 +36,7 @@ updates:
       - "cargo"
     schedule:
       interval: "daily"
-      
+
 
   # Keep the pinned Rust toolchain current (RT-024).
   - package-ecosystem: "rust-toolchain"
