@@ -910,9 +910,11 @@ well-formed-command half of `INV-streams`. The exhaustive `match` and an
   clap argument identifier; `tests/cli/ui/fail/duplicate_identifier.stderr`
   pins the diagnostic shape for `ortho_config` 0.11.0 and `trybuild` 1.0.125.
   Non-vacuity: removing the duplicate `id` from the fail fixture must fail the
-  runner with "should fail to compile, but it succeeded"; removing a derive or
-  attribute from the pass fixture must fail its compilation. Both fixtures do
-  no runtime work.
+  runner with "should fail to compile, but it succeeded"; giving a pass-fixture
+  declaration an invalid localization base must fail its compilation. Both
+  fixtures do no runtime work and carry no crate-level lint allowances: the
+  accepted declarations compile under `-D warnings` without one, so the
+  repository's ban on blanket allowances is kept.
 - Obligation: `INV-guide-matches-binary` and the BDD scenarios.
   Method: the shared tested-example loader plus `rstest-bdd` scenarios using
   `{cmd:string}` placeholders split with `shlex::split` (assert
@@ -1301,6 +1303,7 @@ only intended changes afterwards, and no `.snap.new` remained):
 | Accept a closer one character short                 | `a_shorter_closer_never_closes_the_block` fails; shrunken input has opener length 4 and closer length 3                 |
 | Remove the fail fixture's duplicate `id`            | `trybuild` reports the fail fixture compiled; the runner fails                                                          |
 | Give the pass fixture an invalid localization base  | `trybuild` reports the pass fixture failed to compile                                                                   |
+| Drop the fixtures' crate-level `allow(dead_code)`   | No failure: the fixtures compile under `-D warnings` without crate-level lint allowances                                |
 
 CI durations for the tolerance check (`build-test` job, successful runs).
 `ci.yml` has no `push` trigger, so no literal `main`-branch run exists. The

@@ -7,7 +7,6 @@
 //! 0.11.0 and `trybuild` 1.0.125; refresh it when either version changes. The
 //! fixture performs no runtime work and exists only to fail compilation.
 
-#![allow(dead_code)]
 
 #[derive(
     Debug,

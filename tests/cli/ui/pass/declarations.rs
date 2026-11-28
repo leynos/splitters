@@ -6,7 +6,6 @@
 //! compiling the accepted shapes fails the `cli` target with the fixture's
 //! diagnostic.
 
-#![allow(dead_code)]
 
 use camino::Utf8PathBuf;
 
