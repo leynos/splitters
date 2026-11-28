@@ -4,6 +4,7 @@
 //! behaviour-driven scenarios, and the shared sandbox support they use.
 
 mod bdd;
+mod compile_time;
 mod end_to_end;
 mod guide_examples;
 mod support;

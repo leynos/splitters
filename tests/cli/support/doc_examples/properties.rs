@@ -20,6 +20,15 @@ fn fence_line(marker: char, length: usize, indent: usize) -> String {
     line
 }
 
+/// Strategy for one generated line that contains no line break.
+fn generated_line() -> impl Strategy<Value = String> {
+    prop::collection::vec(
+        any::<char>().prop_filter("not a line break", |ch| *ch != '\n'),
+        0..=12,
+    )
+    .prop_map(|chars| chars.into_iter().collect::<String>())
+}
+
 /// Joins `payloads` as lines, each indented by `indent` spaces.
 fn indented_lines(payloads: &[&str], indent: usize) -> String {
     let mut text = String::new();
@@ -168,33 +177,31 @@ proptest! {
     /// Splitting succeeds exactly when the body starts with a `$ ` command.
     #[test]
     fn command_and_output_requires_a_dollar_prompt(
-        lines in prop::collection::vec(
-            prop::collection::vec(
-                any::<char>().prop_filter("not a line break", |ch| *ch != '\n'),
-                0..=12,
-            )
-            .prop_map(|chars| chars.into_iter().collect::<String>()),
-            1..=3,
-        ),
+        has_prompt in any::<bool>(),
+        content in generated_line(),
+        tail in prop::collection::vec(generated_line(), 0..=2),
     ) {
-        let body = lines.join("\n");
-        let expected_output = body
-            .split_once('\n')
-            .map_or_else(String::new, |(_, output)| output.to_owned());
-        let first = lines.first().map_or("", String::as_str);
+        let first = if has_prompt {
+            format!("$ {content}")
+        } else {
+            prop_assume!(!content.starts_with("$ "));
+            content.clone()
+        };
+        let mut lines = vec![first];
+        lines.extend(tail.iter().cloned());
+        let expected_output = tail.join("\n");
         let example = DocExample {
             id: "demo".to_owned(),
-            body,
+            body: lines.join("\n"),
         };
         let outcome = example.command_and_output();
-        let expected = first.strip_prefix("$ ").map_or_else(
-            || {
-                Err(ExampleError::MissingCommand {
-                    identifier: "demo".to_owned(),
-                })
-            },
-            |command| Ok((command, expected_output.as_str())),
-        );
+        let expected = if has_prompt {
+            Ok((content.as_str(), expected_output.as_str()))
+        } else {
+            Err(ExampleError::MissingCommand {
+                identifier: "demo".to_owned(),
+            })
+        };
         prop_assert_eq!(outcome, expected);
     }
 }

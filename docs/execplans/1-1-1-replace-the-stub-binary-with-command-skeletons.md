@@ -141,12 +141,12 @@ Classification by whole-file rule:
 
 Budgets (net lines, each enforced independently):
 
-- Files: stop and escalate if more than 33 non-ExecPlan, non-generated files
-  change. About 26 are planned. The plan-base comparison now measures 36, and
-  D14 records a 37-file budget for it; the feature delta is 33.
-- Code: stop and escalate above 2,850 net lines (revised from 1,700, then
-  2,300, 2,400, 2,600, and 2,800 during the review rounds; see D14 and D15).
-  The measured change is 2,803. Estimate about 1,300: production 350
+- Files: stop and escalate if more than 37 non-ExecPlan, non-generated files
+  change. About 26 are planned. The plan-base comparison now measures 40, and
+  D14 records a 41-file budget for it; the feature delta is 37.
+- Code: stop and escalate above 3,000 net lines (revised from 1,700, then
+  2,300, 2,400, 2,600, 2,800, and 2,850 during the review rounds; see D14 and
+  D15). The measured change is 2,962. Estimate about 1,300: production 350
   (`src/lib.rs`, `src/main.rs`, `src/cli/` with the argument modules,
   localization, and dispatch), catalogue 35, and tests 900 (unit tables and the
   surface snapshot driver, the end-to-end and BDD (behaviour-driven
@@ -464,13 +464,14 @@ revision is recorded in `Revision note`.
   loader. The loader is this repository's own text parser, so its fence grammar
   is sampled as well as exemplified; the command surface still treats clap's
   parser as an axiom, which is why the draft's verbatim-values property was
-  replaced by fixed witnesses plus a seeded fault. A `trybuild` suite is not
-  added: the compile-time rejection this item relies on is the upstream
-  `ortho_config` derive's behaviour, recorded as `AXIOM-ortho-derive`, while
-  the accepted declarations compile in every build and the catalogue tests
-  assert their generated identifiers. Rationale: see
+  replaced by fixed witnesses plus a seeded fault. A `trybuild` suite pins the
+  compile-time side: the accepted declarations keep deriving, and two fields
+  whose clap argument identifiers normalize to the same Fluent identifier keep
+  failing to compile. The compile-fail expectation is version-scoped to
+  `ortho_config` 0.11.0 and `trybuild` 1.0.125 in the fixture rather than
+  treated as a public error contract. Rationale: see
   `Formal verification decision` and D15. Date/Author: 2026-11-20, planning
-  agent; revised 2026-11-27.
+  agent; revised 2026-11-27 and 2026-11-28.
 - D11. Decision (revised after review): record the help-text and locale policy
   and the declaration conventions (D1, D2, D5, D7, D9) in
   `docs/adrs/adr-0001-command-line-declaration-and-help-text-conventions.md`,
@@ -505,8 +506,9 @@ revision is recorded in `Revision note`.
   here rather than applied silently. Earlier measurements at intermediate heads
   were 2,163 lines (before the review repairs) and 2,363 (after the first
   review round); the revisions to 2,300 and 2,400 are superseded by this one.
-  D15 later revises the code budget to 2,850 and the file budgets to 37
-  (plan-base) and 33 (feature delta) for the loader property tests.
+  D15 later revises the code budget to 3,000 and the file budgets to 41
+  (plan-base) and 37 (feature delta) for the property tests and compile-time
+  fixtures.
 - D13. Decision: the users' guide is the single exact copy of rendered help.
   Each documented example begins with a `$ splitters …` command line; the guide
   test runs that command and compares its output with the fence, and fails on
@@ -518,25 +520,27 @@ revision is recorded in `Revision note`.
   `docs/documentation-style-guide.md` for any fenced users'-guide example, and
   the user asked for the users' guide to be updated; it is scoped to what this
   guide needs. Date/Author: 2026-11-20, planning agent.
-- D15. Decision (review-required verification, 2026-11-27): add `proptest`
-  1.12.0 as a development dependency and cover the tested-example loader's
-  fence grammar with properties; do not add `trybuild`. The review's property
-  prompt names rules whose input axes (delimiter character and length, opening
-  and closing indentation, closing-fence length, trailing blanks, and body
-  content) are broad enough that sampled properties add coverage beyond the
-  fixed examples. The duplicate-identifier rejection a `trybuild` fixture would
-  exercise is the `ortho_config` derive's compile-time behaviour, already
-  recorded as `AXIOM-ortho-derive`: the accepted declarations compile in every
-  build, and the catalogue tests prove their generated identifiers resolve. A
-  compile-fail fixture would pin upstream diagnostic text, which is third-party
-  behaviour rather than a local contract. The new file and the property suite
-  take the code measure to 2,803 and the plan-base file measure to 36, so the
-  budgets are revised to 2,850 code lines and 37 files (33 for the feature
+- D15. Decision (review-required verification, 2026-11-27; extended
+  2026-11-28): add `proptest` 1.12.0 and `trybuild` 1.0.125 as development
+  dependencies. The `proptest` suite covers the tested-example loader's fence
+  grammar, whose input axes (delimiter character and length, opening and
+  closing indentation, closing-fence length, trailing blanks, and body content)
+  are broad enough that sampled properties add coverage beyond the fixed
+  examples. The `trybuild` suite in `tests/cli/compile_time.rs` compiles a pass
+  fixture mirroring the accepted `MapArgs`, `ValidateArgs`, and `ExtractArgs`
+  declarations, and a fail fixture whose two fields share one explicit clap
+  argument identifier, which the `ortho_config` derive rejects when it
+  normalizes the Fluent identifiers. The fail expectation pins the diagnostic
+  shape for `ortho_config` 0.11.0 and `trybuild` 1.0.125 in the fixture
+  comment; it is refreshed when either version changes and is not treated as a
+  public error contract. The property suite and the compile-time fixtures take
+  the code measure to 2,962 and the plan-base file measure to 40, so the
+  budgets are revised to 3,000 code lines and 41 files (37 for the feature
   delta). Both the dependency-list and budget revisions are recorded here
   rather than applied silently. The review gate requires the work and the
   user's standing instruction is to continue to equilibrium, so the revision is
   reported with the delivery record rather than pausing the loop. Date/Author:
-  2026-11-27, implementation agent.
+  2026-11-27, implementation agent; extended 2026-11-28.
 
 ## Outcomes & retrospective
 
@@ -577,12 +581,12 @@ revision is recorded in `Revision note`.
   `tests/cli/support/doc_examples/properties.rs` covering shorter closers,
   four-space indentation, marked-block extraction with indentation stripping,
   shorter runs inside a body, unmarked fences, and the shell-prompt split; two
-  seeded faults each failed with a minimal input. Declined `trybuild`: the
-  duplicate-normalized-identifier rejection is the upstream derive's
-  `AXIOM-ortho-derive`, the accepted declarations compile in every build, and
-  the catalogue tests assert the generated identifiers (D15, ADR-0001). The
-  code budget moved to 2,850 for 2,803 measured lines, and the file budgets to
-  37 plan-base and 33 feature-delta files.
+  seeded faults each failed with a minimal input. A later review round required
+  the compile-time fixtures after all, so `trybuild` 1.0.125 now compiles a
+  pass fixture mirroring the accepted declarations and a fail fixture for the
+  duplicate-identifier rejection, with a version-scoped expectation (D15,
+  ADR-0001). The code budget moved to 3,000 for 2,962 measured lines, and the
+  file budgets to 41 plan-base and 37 feature-delta files.
 - Open questions for later items, recorded here as EP-M4 requires: 1.1.4 owns
   whether shared inputs become globals (D12), how the generated keys for
   `proposal` and `branch` are treated (D3), and whether risky fields such as
@@ -825,8 +829,9 @@ well-formed-command half of `INV-streams`. The exhaustive `match` and an
   failures such as broken pipes.
 - `AXIOM-ortho-derive`: `ortho_config` 0.11.0 generates `LOCALIZATION_BASE`,
   `ABOUT_ID`, and `ARG_IDS` as documented and rejects duplicate normalized
-  argument identifiers at compile time. D15 records why the rejection is
-  trusted rather than pinned by a `trybuild` fixture.
+  argument identifiers at compile time. D15 pins the rejection with a
+  version-scoped `trybuild` fixture rather than treating the diagnostic as a
+  public error contract.
 - `AXIOM-ortho-localize`: `parse_localized_command` and
   `LocalizeCmd::with_base(..).localize(..)` look up `<base>-<command>-about` and
   `<base>-<command>-args-<arg>-help` and fall back to clap's text when an
@@ -898,6 +903,16 @@ well-formed-command half of `INV-streams`. The exhaustive `match` and an
   `std::fs::create_dir_all("splitters")` in `main` must fail `INV-no-effects`.
   The non-UTF-8 row (Unix only, `OsStr::from_bytes(b"\xff")`) must exit `2`;
   seeded fault: switching `main` to `std::env::args()` must make it exit `101`.
+- Obligation: `INV-single-declaration` compile-time half, `AXIOM-ortho-derive`.
+  Method: `trybuild` in `tests/cli/compile_time.rs`. Artefact:
+  `tests/cli/ui/pass/declarations.rs` mirrors the accepted declarations and
+  `tests/cli/ui/fail/duplicate_identifier.rs` gives two fields one explicit
+  clap argument identifier; `tests/cli/ui/fail/duplicate_identifier.stderr`
+  pins the diagnostic shape for `ortho_config` 0.11.0 and `trybuild` 1.0.125.
+  Non-vacuity: removing the duplicate `id` from the fail fixture must fail the
+  runner with "should fail to compile, but it succeeded"; removing a derive or
+  attribute from the pass fixture must fail its compilation. Both fixtures do
+  no runtime work.
 - Obligation: `INV-guide-matches-binary` and the BDD scenarios.
   Method: the shared tested-example loader plus `rstest-bdd` scenarios using
   `{cmd:string}` placeholders split with `shlex::split` (assert
@@ -945,15 +960,16 @@ stay beside the properties as the readable specification; seeded faults in
 closer one character short) each fail a property with a minimal input. Recorded
 as D10 and D15.
 
-The `ortho_config` derive's compile-time rejection of duplicate normalized
-argument identifiers is not covered by a `trybuild` fixture. It is
-`AXIOM-ortho-derive` in this plan: upstream macro behaviour that this item
-trusts rather than verifies, exactly as it trusts clap's parser. The accepted
-declarations exercise the compile-pass path in every build, and
-`INV-catalogue-ids-agree` plus `INV-catalogue-complete` assert the generated
-identifiers at runtime. A compile-fail fixture would pin the upstream
-diagnostic's text, which is third-party behaviour, not a local contract; see
-ADR-0001's compile-time contract note. Recorded as D15.
+The `ortho_config` derive's compile-time side is covered by `trybuild`.
+`tests/cli/compile_time.rs` compiles a pass fixture that mirrors the accepted
+`MapArgs`, `ValidateArgs`, and `ExtractArgs` declarations, and a fail fixture
+whose two fields share one explicit clap argument identifier, which the derive
+rejects while normalizing the Fluent identifiers. The fail expectation pins the
+diagnostic shape for `ortho_config` 0.11.0 and `trybuild` 1.0.125 in the
+fixture comment and is refreshed when either version changes; it is a
+version-scoped check, not a public error contract. `INV-catalogue-ids-agree`
+plus `INV-catalogue-complete` still assert the generated identifiers at
+runtime. Recorded as D15; ADR-0001 records the same ownership boundary.
 
 ### Suggested BDD features
 
@@ -1259,6 +1275,10 @@ EP-M4 green: cargo nextest run --test cli -> 45 passed, 0 skipped
 review (2026-11-27):
        cargo nextest run --test cli -E 'test(/doc_examples/)'
        -> 23 passed (17 example and table cases, 6 properties)
+review (2026-11-28):
+       cargo test --test cli compile_time
+       -> 1 passed (compile-pass and compile-fail fixtures)
+       TRYBUILD=overwrite capture -> duplicate_identifier.stderr reviewed
 ```
 
 Seeded faults (each applied, observed, reverted; `git status --short` showed
@@ -1279,6 +1299,8 @@ only intended changes afterwards, and no `.snap.new` remained):
 | Edit one word of a guide example                    | `the_documented_output_matches_the_binary` fails with a diff                                                            |
 | Change the loader's opener indent threshold 3 to 4  | `an_opener_indented_four_or_more_spaces_never_opens_a_block` fails; shrunken input has a 4-space opener                 |
 | Accept a closer one character short                 | `a_shorter_closer_never_closes_the_block` fails; shrunken input has opener length 4 and closer length 3                 |
+| Remove the fail fixture's duplicate `id`            | `trybuild` reports the fail fixture compiled; the runner fails                                                          |
+| Give the pass fixture an invalid localization base  | `trybuild` reports the pass fixture failed to compile                                                                   |
 
 CI durations for the tolerance check (`build-test` job, successful runs).
 `ci.yml` has no `push` trigger, so no literal `main`-branch run exists. The
@@ -1356,11 +1378,11 @@ Authorized dependencies (caret requirements):
   `pretty_assertions = "1.4.1"` (readable diffs for whole-struct and
   guide-output comparisons), `proptest = "1.12.0"` (the loader's fence
   properties; see D15), `rstest-bdd = "0.6.0"`, `rstest-bdd-macros = "0.6.0"`,
-  `shlex = "2.0.1"`, and `tempfile = "3.27.0"` (already in the closure through
-  `insta`). Existing `cap-std`, `rstest`, and `toml` stay as they are.
+  `shlex = "2.0.1"`, `tempfile = "3.27.0"` (already in the closure through
+  `insta`), and `trybuild = "1.0.125"` (the compile-time declaration fixtures;
+  see D15). Existing `cap-std`, `rstest`, and `toml` stay as they are.
 - Not added: `thiserror` (no error type), `mockable` (no environment access),
-  `trybuild` (the derive's compile-time rejection is `AXIOM-ortho-derive`; see
-  D15), and `fluent-bundle` (OrthoConfig re-exports the Fluent types it needs).
+  and `fluent-bundle` (OrthoConfig re-exports the Fluent types it needs).
 
 Public library surface (all in `splitters::cli`):
 
@@ -1460,10 +1482,10 @@ issue in `Surprises & discoveries`.
   filed at the user's request (#717 documentation metadata, #718 isolation
   marks, #719 `cargo orthohelp` locale). No change to scope, decisions, or
   milestones.
-- 2026-11-27: review-required verification. Added `proptest` and six
-  properties for the tested-example loader's fence grammar (D10, D15); declined
-  `trybuild` because the duplicate-identifier rejection is the upstream derive's
-  `AXIOM-ortho-derive` and the accepted declarations already compile (D15).
-  Budgets revised to 2,850 code lines and 37 plan-base/33 feature-delta files
-  against a measured 2,803 code lines and 36/33 files; ADR-0001 records the
+- 2026-11-28: review-required verification. Added `proptest` and six
+  properties for the tested-example loader's fence grammar, plus `trybuild`
+  1.0.125 with compile-pass and compile-fail declaration fixtures (D10, D15).
+  The fail fixture pins a version-scoped `ortho_config` 0.11.0 diagnostic.
+  Budgets revised to 3,000 code lines and 41 plan-base/37 feature-delta files
+  against a measured 2,962 code lines and 40/37 files; ADR-0001 records the
   compile-time contract decision.

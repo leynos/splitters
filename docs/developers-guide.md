@@ -339,9 +339,17 @@ one point at a time: a shorter closer never closes, four or more spaces never
 open a block, a marked block loads its identifier and indentation-stripped
 body, a shorter run inside the body is content, an unmarked fence is rejected,
 and `command_and_output` succeeds exactly at the shell prompt. The example
-tests stay as the readable specification. The derive's compile-time rejection
-of duplicate normalized argument identifiers belongs to `ortho_config`;
-ADR-0001 records why no `trybuild` fixture pins that upstream diagnostic.
+tests stay as the readable specification.
+
+`tests/cli/compile_time.rs` runs the `trybuild` fixtures under `tests/cli/ui/`:
+`pass/declarations.rs` mirrors the accepted `MapArgs`, `ValidateArgs`, and
+`ExtractArgs` declarations, and `fail/duplicate_identifier.rs` gives two fields
+one explicit clap argument identifier that `ortho_config` rejects. The
+`.stderr` expectation is scoped to `ortho_config` 0.11.0 and `trybuild`
+1.0.125; refresh it with
+`TRYBUILD=overwrite cargo test --test cli compile_time` when either version
+changes, and review the new expectation before accepting it. ADR-0001 records
+this ownership boundary.
 
 The structured command surface is pinned by one `insta` snapshot under
 `src/cli/tests/snapshots/`. Accept a snapshot update only after comparing it
@@ -366,6 +374,7 @@ The `cli` integration target uses these development dependencies:
 - `shlex` splits documented and scenario command strings into argument vectors.
 - `tempfile` creates the sandbox directory that the no-effects checks compare
   against its baseline.
+- `trybuild` compiles the compile-pass and compile-fail declaration fixtures.
 
 The library unit tests under `src/cli/tests/` use `googletest` for the
 set-equality and substring matchers in the declaration and catalogue tables.

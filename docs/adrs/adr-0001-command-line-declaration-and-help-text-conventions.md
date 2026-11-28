@@ -101,19 +101,23 @@ is that base plus the command name, so the identifier the localizer looks up
 generates. A test asserts the agreement, because a mismatch falls back silently
 to clap's text.
 
-### Compile-time contract ownership
+### Compile-time contracts
 
-The declarations rely on `ortho_config`'s derive to reject invalid ones at
-compile time, including two fields whose clap argument identifiers normalize to
-the same Fluent identifier. That rejection is the upstream crate's compile-time
-behaviour, not a contract this repository implements: the declarations here
-exercise the accepted path on every build, and the catalogue tests prove the
-generated identifiers resolve. A `trybuild` compile-fail fixture would pin the
-upstream diagnostic's text, so the repository does not add one; the plan
-records the same decision as `AXIOM-ortho-derive` and D15. If Splitters later
-owns a macro or a compile-time contract of its own, `trybuild` (as `AGENTS.md`
-requires for compile-fail and compile-pass contracts) is the right tool for
-that contract.
+`trybuild` in `tests/cli/compile_time.rs` pins the declarations' compile-time
+side. The pass fixture mirrors the accepted `MapArgs`, `ValidateArgs`, and
+`ExtractArgs` shapes, so a derive or attribute change that stops compiling them
+fails the suite. The fail fixture gives two fields one explicit clap argument
+identifier; `ortho_config`'s derive rejects that while normalizing the Fluent
+identifiers, and the catalogue tests prove the accepted declarations' generated
+identifiers resolve.
+
+The rejection is the upstream crate's behaviour, so the `.stderr` expectation
+is version-scoped: the fixture and runner record `ortho_config` 0.11.0 and
+`trybuild` 1.0.125 and are refreshed when either version changes. It is not a
+public error contract and should not be treated as one. The plan records the
+same boundary as `AXIOM-ortho-derive` and D15. If Splitters later owns a macro
+or a compile-time contract of its own, that contract gets its own fixtures
+under the same runner.
 
 ### Boolean flags
 
