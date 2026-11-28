@@ -239,7 +239,8 @@ project:
     whitaker --all -- --all-targets --all-features
     ```
 
-    checking Python docstring coverage for `tests/` through `interrogate`, which
+    checking Python docstring coverage for `scripts/` and `tests/` through
+`interrogate`, which
     needs `uv` on `PATH`. It then builds documentation, lints every target with
     all features enabled, and runs the Whitaker Dylint suite through its
     `whitaker` wrapper. Documentation warnings, Clippy warnings, and Whitaker
