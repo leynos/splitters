@@ -1,0 +1,11 @@
+error: duplicate localized argument id 'shared' for field 'first' and 'second'; rename the field or set `#[arg(id = "…")]`
+  --> tests/cli/ui/fail/duplicate_identifier.rs:30:5
+   |
+30 |     second: Option<String>,
+   |     ^^^^^^
+
+error: first defined here
+  --> tests/cli/ui/fail/duplicate_identifier.rs:27:5
+   |
+27 |     first: Option<String>,
+   |     ^^^^^

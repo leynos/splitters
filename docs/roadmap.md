@@ -20,7 +20,7 @@ command parsing, exit behaviour, and top-level repository preflight. It matters
 first because every later workstream depends on predictable argument handling
 and error reporting.
 
-- [ ] 1.1.1. Replace the stub binary with the `map`, `validate`, and
+- [x] 1.1.1. Replace the stub binary with the `map`, `validate`, and
   `extract` command skeletons using `ortho-config`.[^1]
   - Define the root parser as a `clap`-derived type, and each of the three
     subcommands as a `clap`-derived argument struct that also derives

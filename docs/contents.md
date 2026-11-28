@@ -2,12 +2,22 @@
 
 [Documentation contents](contents.md) is the index for the project documents.
 
+## User documentation
+
+- [User's guide](users-guide.md) explains how operators run the declared
+  commands, how to read the current exit status, and where configuration will
+  come from.
+
 ## Project design and planning
 
 - [Splitters design](splitters-design.md) explains the architecture and command
   contracts.
 - [Roadmap](roadmap.md) sequences implementation work and defines its
   acceptance criteria.
+- [Architectural decision records](adrs/) record significant design decisions;
+  [ADR-0001](adrs/adr-0001-command-line-declaration-and-help-text-conventions.md)
+  covers the command-line and help-text conventions.
+- [Execution plans](execplans/) record the approved plans for delivery work.
 
 ## Contributor guidance
 

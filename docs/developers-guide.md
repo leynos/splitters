@@ -15,11 +15,12 @@ modules and operational workflows.
 
 The current repository state is intentionally early:
 
-- `src/main.rs` is a thin binary entry point.
-- `src/lib.rs` currently exposes only a stub greeting used to keep the package
-  compatible with the repository's lint and test gates.
-- The architectural modules described below are target module boundaries that
-  should be introduced incrementally as roadmap items land.
+- `src/main.rs` is a thin binary entry point that parses arguments, reports the
+  selected command's interim status, and maps it to an exit code.
+- `src/lib.rs` exposes `cli`, whose `map`, `validate`, and `extract` commands
+  are declared and documented but not implemented (roadmap item 1.1.1).
+- The remaining architectural modules described below are target module
+  boundaries that should be introduced incrementally as roadmap items land.
 
 Contributors should therefore treat this guide as an implementation contract
 for code that is about to be added, not as a claim that the full module graph
@@ -93,6 +94,26 @@ defaults come from one declaration.[^3] It converts the resolved configuration
 into typed command requests and maps domain results into the documented process
 exit codes.
 
+The module tree introduced by roadmap item 1.1.1 is:
+
+| Path                      | Responsibility                                                         |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `src/cli/mod.rs`          | `Cli`, `Commands`, `Invocation`, `localized_command`, `try_parse_from` |
+| `src/cli/args/`           | One argument struct per command, with shared re-exports                |
+| `src/cli/localization.rs` | The embedded catalogue and `help_localizer`                            |
+| `src/cli/dispatch.rs`     | Command naming, the interim outcome, and its diagnostic                |
+
+`localized_command` is the only constructor of the command tree used for
+parsing or help. It applies `LocalizeCmd::with_base("splitters.cli")` and a
+fixed help width of 100 columns to the root and every subcommand, so
+localization and layout are never skipped.
+
+A subcommand's localization base is the root base plus its command name
+(`splitters.cli.map`), which makes the identifier the localizer looks up equal
+to the identifier the OrthoConfig derive generates. `LocalizeCmd` falls back to
+clap's text when an identifier is missing, so the catalogue tests, not review,
+prove the agreement.
+
 Implementation guidance:
 
 - Keep stdout machine-readable. Structured JSON reports belong on stdout, while
@@ -102,8 +123,27 @@ Implementation guidance:
 - Declare each option once on the OrthoConfig-derived type. Do not add a
   parallel configuration parser, and do not read environment variables by
   hand.[^3]
+- Never call `OrthoConfig::load()` on an argument struct. That generated loader
+  reads un-namespaced keys such as `SPLITTERS_BASE` and would become a second
+  configuration surface; configuration discovery and `load_and_merge*` belong
+  to roadmap item 1.1.4.
 - Avoid placing repository logic, manifest parsing, or worktree mutation in the
   CLI layer.
+
+#### Add an option in four steps
+
+1. Add the typed field to the command's argument struct, with an
+   `#[arg(...)]` declaration and a `///` comment that states the Rust semantics.
+2. Run the catalogue test: it names the generated help identifier that is
+   missing.
+3. Add that identifier, and its en-GB text, to
+   `locales/en-GB/messages.ftl`.
+4. Review the surface snapshot and the users'-guide example the change
+   affects, and update both deliberately.
+
+The catalogue is the only owner of user-facing help text. Rust doc comments
+describe semantics for developers and must not restate help text; the catalogue
+is always loaded, so doc-comment help is never rendered.
 
 ### 3.2. `manifest`
 
@@ -272,6 +312,75 @@ repository is:
 5. `make lint` (see [Process-wide state in tests](#process-wide-state-in-tests))
 6. `make test`
 
+### The `cli` integration target
+
+Integration tests for the executable live under `tests/cli/` and run as one
+`cli` target. Every child process starts through the `splitters_cmd` fixture in
+`tests/cli/support/mod.rs`, which clears the child environment, keeps only
+`PATH` and coverage variables, points `HOME` and `XDG_CONFIG_HOME` at a
+temporary sandbox, and sets `GIT_CEILING_DIRECTORIES` above it. The fixture is
+the only way tests start the binary, so the environment and sandbox rules
+cannot be forgotten.
+
+`tests/cli/support/doc_examples/mod.rs` is the shared tested-example loader for
+user-facing Markdown. It extracts fences marked with
+`<!-- tested-example: <identifier> -->` and rejects an unmarked fence, an
+unterminated fence, a missing identifier, and a duplicate identifier.
+`tests/cli/guide_examples.rs` runs each users'-guide example and compares its
+output with the fence. To update an example, change the binary or catalogue, run
+`make test`, copy the reviewed output into the guide's fence, and rerun the
+gate; never paste output without reviewing it.
+
+The loader's fence grammar also has a property suite in
+`tests/cli/support/doc_examples/properties.rs`. `proptest` samples delimiter
+character and length, opening and closing indentation, closing-fence length,
+trailing blanks, and body content, and asserts the rules the example tests pin
+one point at a time: a shorter closer never closes, four or more spaces never
+open a block, a marked block loads its identifier and indentation-stripped
+body, a shorter run inside the body is content, an unmarked fence is rejected,
+and `command_and_output` succeeds exactly at the shell prompt. The example
+tests stay as the readable specification.
+
+`tests/cli/compile_time.rs` runs the `trybuild` fixtures under `tests/cli/ui/`:
+`pass/declarations.rs` mirrors the accepted `MapArgs`, `ValidateArgs`, and
+`ExtractArgs` declarations, and `fail/duplicate_identifier.rs` gives two fields
+one explicit clap argument identifier that `ortho_config` rejects. The
+`.stderr` expectation is scoped to `ortho_config` 0.11.0 and `trybuild`
+1.0.125; refresh it with
+`TRYBUILD=overwrite cargo test --test cli compile_time` when either version
+changes, and review the new expectation before accepting it. ADR-0001 records
+this ownership boundary.
+
+The structured command surface is pinned by one `insta` snapshot under
+`src/cli/tests/snapshots/`. Accept a snapshot update only after comparing it
+with design Tables 3 to 5 and the decision log in the ExecPlan that introduced
+the change.
+
+The behaviour-driven layer is `tests/cli/bdd.rs`, whose `#[given]`, `#[when]`,
+and `#[then]` functions are the step definitions, and
+`tests/features/command_surface.feature`, which holds the Gherkin scenarios.
+The scenarios run the binary through the same `splitters_cmd` fixture, and the
+final scenario reads a marked users'-guide example, runs its documented
+command, and compares the result with the fence. Focused runs use
+`cargo nextest run --test cli -E 'test(/bdd/)'`; `make test` runs the BDD
+scenarios with the rest of the suite.
+
+The `cli` integration target uses these development dependencies:
+
+- `assert_cmd` runs the built binary and captures its streams and status.
+- `proptest` generates the loader's fence-rule inputs for the property suite.
+- `rstest-bdd` and `rstest-bdd-macros` provide the scenario runner and step
+  attributes.
+- `shlex` splits documented and scenario command strings into argument vectors.
+- `tempfile` creates the sandbox directory that the no-effects checks compare
+  against its baseline.
+- `trybuild` compiles the compile-pass and compile-fail declaration fixtures.
+
+The library unit tests under `src/cli/tests/` use `googletest` for the
+set-equality and substring matchers in the declaration and catalogue tables.
+`pretty_assertions` supplies readable whole-struct and guide-output diffs, and
+is shared by those unit tests and the `cli` target.
+
 ### Process-wide state in tests
 
 `clippy.toml` disallows `std::env::set_var`, `std::env::remove_var` and
@@ -400,7 +509,7 @@ boundary.
 [^1]: `docs/splitters-design.md`
 [^2]: `docs/roadmap.md`
 [^3]: `docs/ortho-config-users-guide.md`, the imported user's guide for
-  `leynos/ortho-config` v0.10.0
+  `leynos/ortho-config` v0.11.0
 
 ## Markdown formatting
 
