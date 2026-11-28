@@ -93,3 +93,25 @@ def test_ci_runs_the_target_unconditionally() -> None:
     ]
     assert steps, f"ci.yml must run `make {TARGET}` in a step"
     assert all("if" not in step for step in steps), steps
+
+
+def test_both_contract_runs_use_the_configured_uv_gate() -> None:
+    """Route the checker and the pytest run through ``UV_GATE``.
+
+    A caller may point ``UV_GATE`` at another helper path; a run that started
+    ``uv`` directly would ignore it.
+    """
+    result = subprocess.run(
+        ["make", "-n", TARGET, "UV_GATE=/opt/injected/gate"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    runs = [
+        line
+        for line in result.stdout.splitlines()
+        if "cv005-contracts" in line or "pytest" in line
+    ]
+    assert len(runs) == 2, runs
+    assert all(line.lstrip().startswith("/opt/injected/gate tool ") for line in runs), runs
