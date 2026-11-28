@@ -146,7 +146,7 @@ Budgets (net lines, each enforced independently):
   D14 records a 41-file budget for it; the feature delta is 37.
 - Code: stop and escalate above 3,000 net lines (revised from 1,700, then
   2,300, 2,400, 2,600, 2,800, and 2,850 during the review rounds; see D14 and
-  D15). The measured change is 2,962. Estimate about 1,300: production 350
+  D15). The measured change is 2,960. Estimate about 1,300: production 350
   (`src/lib.rs`, `src/main.rs`, `src/cli/` with the argument modules,
   localization, and dispatch), catalogue 35, and tests 900 (unit tables and the
   surface snapshot driver, the end-to-end and BDD (behaviour-driven
@@ -534,7 +534,7 @@ revision is recorded in `Revision note`.
   shape for `ortho_config` 0.11.0 and `trybuild` 1.0.125 in the fixture
   comment; it is refreshed when either version changes and is not treated as a
   public error contract. The property suite and the compile-time fixtures take
-  the code measure to 2,962 and the plan-base file measure to 40, so the
+  the code measure to 2,960 and the plan-base file measure to 40, so the
   budgets are revised to 3,000 code lines and 41 files (37 for the feature
   delta). Both the dependency-list and budget revisions are recorded here
   rather than applied silently. The review gate requires the work and the
@@ -585,7 +585,7 @@ revision is recorded in `Revision note`.
   the compile-time fixtures after all, so `trybuild` 1.0.125 now compiles a
   pass fixture mirroring the accepted declarations and a fail fixture for the
   duplicate-identifier rejection, with a version-scoped expectation (D15,
-  ADR-0001). The code budget moved to 3,000 for 2,962 measured lines, and the
+  ADR-0001). The code budget moved to 3,000 for 2,960 measured lines, and the
   file budgets to 41 plan-base and 37 feature-delta files.
 - Open questions for later items, recorded here as EP-M4 requires: 1.1.4 owns
   whether shared inputs become globals (D12), how the generated keys for
@@ -1490,5 +1490,5 @@ issue in `Surprises & discoveries`.
   1.0.125 with compile-pass and compile-fail declaration fixtures (D10, D15).
   The fail fixture pins a version-scoped `ortho_config` 0.11.0 diagnostic.
   Budgets revised to 3,000 code lines and 41 plan-base/37 feature-delta files
-  against a measured 2,962 code lines and 40/37 files; ADR-0001 records the
+  against a measured 2,960 code lines and 40/37 files; ADR-0001 records the
   compile-time contract decision.
